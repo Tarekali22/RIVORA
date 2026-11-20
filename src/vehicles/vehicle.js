@@ -314,7 +314,7 @@ export class VehicleManager {
   }
   exit(force = false) {
     const G = this.game, P = G.player, v = P.vehicle; if (!v) return;
-    if (!force && Math.abs(v.speed) > 6 && v.type !== 'heli') { this.eject(v, false); return; }
+    if (!force && Math.abs(v.speed) > 6 && v.type !== 'heli' && v.type !== 'plane') { this.eject(v, false); return; }
     let spot = null;
     for (const side of [1, -1]) {
       const d = v.doorWorld(side); const y = G.city.surfaceHeight(d.x, d.z, v.pos.y + 1.5, 2);
@@ -334,7 +334,7 @@ export class VehicleManager {
   }
   eject(v, crash) {
     const G = this.game, P = G.player; const sp = v.vel.clone();
-    this.exit(true); P.vel.copy(sp).multiplyScalar(0.6); P.vel.y = 3; P.grounded = false;
+    this.exit(true); if (P.state === 'freefall' || P.state === 'swim') return; P.vel.copy(sp).multiplyScalar(0.6); P.vel.y = 3; P.grounded = false;
     if (crash) { P.damage(18 + sp.length() * 0.8, null, { knock: true, fall: true }); }
     else { P.damage(8 + sp.length() * 0.5, null, { knock: true, fall: true }); }
   }

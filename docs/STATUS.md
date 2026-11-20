@@ -38,3 +38,20 @@ Statuses follow the spec's scale: **Implemented & tested** (has a passing automa
 | Mobile touch controls | Implemented & tested | Context-sensitive buttons, joystick, look pad, rotate-device notice |
 | Firearms, 18 more story missions, friend house visits, diving | Not implemented | Roadmap |
 | Public link sharing | Blocked by platform for the agent | Must be enabled by the owner from the artifact's Share menu |
+
+## Automated test results (headless Chromium, SwiftShader software WebGL)
+
+| Suite | Result | Covers |
+| --- | --- | --- |
+| `tests/gameplay.mjs` | 38/39 (the 1 miss was a flawed metric, re-verified below) | Title, creator, companion select, keyboard move/sprint/jump, ground contact, mouse camera, vehicle enter/drive/steer/brake/exit, signal cycle, traffic stopping at red, fine at active camera only, phone, story mission + $2,500 reward, café purchase, gym stat gain, parachute deploy + landing, helicopter flight, save code round-trip + corrupt-save rejection, companion following, melee, wanted level, police response, audio level (peak 0.105), no console errors |
+| `tests/systems.mjs` | 18/20, both misses fixed and re-verified | Contract with generated target photo, accept from message, contract completion, storm + night lighting, dealership, clothing, jet ski on water, swim on exit, plane take-off, EV charging, nightclub dancing + club music, sleep/autosave, wasted → hospital, busted → police, population |
+| `tests/regress.mjs` | 3/3 | Jumping out of a moving plane starts freefall; pedestrians keep moving while walking (22 walkers, 0 stuck); no console errors |
+| `tests/mobile.mjs` (Pixel 7 landscape) | 11/11 | Touch detection, controls visible, no button overlaps, thumb-sized targets, joystick movement, touch camera, punch button, vehicle context buttons, portrait notice, no errors |
+
+Bugs found and fixed by these runs: water plane 1 m too high, jet-ski audio NaN that froze the loop (plus a loop guard), plane bail-out knockdown, touch-button overlap on short screens, café camera outside the room, washed-out sky.
+
+Frame rate in the container is ~3 FPS because WebGL is emulated on the CPU; it does not reflect real devices. Real-GPU and real-phone frame rates were **not** measured here.
+
+## Public link
+
+Artifact: https://claude.ai/artifact/YLcj4s9Pbnou3t8inVmtog — the platform reports it is shared as "Anyone with the link". From the container an anonymous request returns HTTP 200 without a sign-in wall, but the viewer could not finish rendering here because its asset host is blocked by this environment's network policy, so the full anonymous visitor experience was not verified from the cloud session.
