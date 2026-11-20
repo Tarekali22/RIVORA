@@ -87,7 +87,7 @@ class Game {
     document.getElementById('loading').remove();
     this.ui.setupTouch();
     this.last = performance.now(); this.fpsAcc = 0; this.fpsN = 0; this.fps = 60; this.slowT = 0;
-    renderer.setAnimationLoop((t) => this.frame(t));
+    renderer.setAnimationLoop((t) => { try { this.frame(t); } catch (e) { this._errs = (this._errs || 0) + 1; if (this._errs < 4) { console.error('[RIVORA frame]', e); if (this.ui) this.ui.toast('Something glitched', 'The game recovered from an error and kept running.', 'warn', 3); } } });
     // hot-reload continuity inside the Claude viewer
     const hot = window.claude && window.claude.hot;
     if (hot && hot.snapshot) try { hot.snapshot(() => (this.running ? this.save.collect() : null)); } catch (e) {}
@@ -252,7 +252,7 @@ class Game {
     const r = this.renderer, sc = new THREE.Scene(), h = new Humanoid(a, { shadow: false });
     sc.add(h.object); sc.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.2)); const dl = new THREE.DirectionalLight(0xfff0dd, 2.2); dl.position.set(1, 2, 2); sc.add(dl);
     sc.background = new THREE.Color(0x8fa3ad); h.update(0.016, { mode: 'loco', speed: 0, lookYaw: 0 });
-    const cam = new THREE.PerspectiveCamera(28, 0.8, 0.05, 10); const hy = 1.64 * h.scale; cam.position.set(0.12, hy, 0.95); cam.lookAt(0, hy - 0.02, 0);
+    const cam = new THREE.PerspectiveCamera(30, 0.8, 0.05, 10); const hy = 1.6 * h.scale; cam.position.set(0.18, hy + 0.04, 1.35); cam.lookAt(0, hy - 0.04, 0);
     const W = 240, H = 300, rt = new THREE.WebGLRenderTarget(W, H); r.setRenderTarget(rt); r.render(sc, cam);
     const px = new Uint8Array(W * H * 4); r.readRenderTargetPixels(rt, 0, 0, W, H, px); r.setRenderTarget(null); rt.dispose();
     const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); const id = g.createImageData(W, H);
@@ -303,6 +303,7 @@ class Game {
       let rem = dt; while (rem > 1e-4) { const h = Math.min(rem, 1 / 45); this.step(h); rem -= h; }
     } else if (!this.running) this.step(dt);
     if (this.running) this._interactions();
+    if (this.paused && ((this._pf = (this._pf || 0) + 1) % 4)) return; // save power while paused
     this.renderer.render(this.scene, this.camera);
     if (this.settings.showFps) this.ui.hint(`${this.fps.toFixed(0)} FPS · ${this.renderer.info.render.calls} draws`, 1.2);
   }
@@ -345,7 +346,7 @@ class Game {
     if (I.pressed('map')) { this.phone.open && this.phone.close(); this.ui.openMap(); }
     if (this.ui.mapOpen) return;
     if (I.pressed('phone')) { if (this.phone.incoming && !this.phone.incoming.live) this.phone.answer(); else this.phone.toggle(); }
-    if (this.input.keys.has('KeyI')) { this.input.keys.delete('KeyI'); this.menus.bag(); }
+    if (I.pressed('bag') || this.input.keys.has('KeyI')) { this.input.keys.delete('KeyI'); this.menus.bag(); }
     if (I.pressed('companion')) this.companion.command('toggle');
     if (I.pressed('companionCome')) this.companion.command('come');
   }

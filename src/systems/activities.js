@@ -12,6 +12,13 @@ const GYM = {
   bike: { stats: { stamina: 0.25, recovery: 0.15 }, label: 'Stationary bike', pose: 'bike', cam: 3.4, hold: true },
   stretch: { stats: { recovery: 0.4 }, label: 'Stretching', pose: 'stretch', cam: 3.2, hold: true },
 };
+const GEAR = {};
+function gear(kind) {
+  const g = new THREE.Group(), steel = new THREE.MeshStandardMaterial({ color: 0xc8c8c8, metalness: 0.8, roughness: 0.3 }), plate = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.6 });
+  if (kind === 'bar') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.7, 8), steel); b.rotation.z = Math.PI / 2; g.add(b); for (const s of [-0.68, 0.68]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.05, 16), plate); p.rotation.z = Math.PI / 2; p.position.x = s; g.add(p); } }
+  else { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.3, 6), steel); b.rotation.x = Math.PI / 2; g.add(b); for (const s of [-0.12, 0.12]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 10), plate); p.rotation.x = Math.PI / 2; p.position.z = s; g.add(p); } }
+  return g;
+}
 export class Activities {
   constructor(game) { this.game = game; }
   consume(it) {
@@ -34,6 +41,8 @@ export class Activities {
     if (kind === 'pullup') { x += fx * 0.7; z += fz * 0.7; }
     if (kind === 'pushup') { x -= fx * 1.0; z -= fz * 1.0; }
     P.teleport(x, y, z, head); P.state = 'activity';
+    if (kind === 'bench' || kind === 'squat') P.h.hold('item', gear('bar'), 'handR', [0.27, -0.06, 0.0]);
+    if (kind === 'dumbbell') { P.h.hold('item', gear('db'), 'handR', [0, -0.07, 0]); P.h.hold('item2', gear('db'), 'handL', [0, -0.07, 0]); }
     let rep = 0, reps = 0, sets = 0, prog = 0, phase = 0, auto = 0;
     const target = def.hold ? 0 : 8;
     const self = this;
@@ -64,7 +73,7 @@ export class Activities {
     // gradual physique change
     const b = clamp(0.4 + P.stats.strength / 140, 0, 1); if (Math.abs(b - P.a.build) > 0.04) { P.a.build = b; P.h.setAppearance(P.a); }
   }
-  stopActivity() { const G = this.game, P = G.player; P.activity = null; P.state = 'foot'; P.pos.y = G.city.surfaceHeight(P.pos.x, P.pos.z, P.pos.y + 1); P.pos.x += Math.sin(P.heading) * 0.8; P.pos.z += Math.cos(P.heading) * 0.8; }
+  stopActivity() { const G = this.game, P = G.player; P.h.drop('item'); P.h.drop('item2'); P.activity = null; P.state = 'foot'; P.pos.y = G.city.surfaceHeight(P.pos.x, P.pos.z, P.pos.y + 1); P.pos.x += Math.sin(P.heading) * 0.8; P.pos.z += Math.cos(P.heading) * 0.8; }
   // ---------------- nightclub ----------------
   startDance() {
     const G = this.game, P = G.player; if (P.state !== 'foot') return; P.state = 'activity'; let style = 0, vibe = 0, last = -1;

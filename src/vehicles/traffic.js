@@ -34,7 +34,7 @@ export class Traffic {
     const v = this.game.vehicles.spawn(key, 0, -2000, 0, { color }); return v;
   }
   _recycle(v) {
-    const G = this.game; const i = G.vehicles.list.indexOf(v); if (i >= 0) G.vehicles.list.splice(i, 1);
+    const G = this.game; if (this.vp) for (const sl of this.vp) if (sl.tc.v === v) { G.audio.engineStop(sl.voice); sl.dead = true; } if (this.vp) this.vp = this.vp.filter((q) => !q.dead); const i = G.vehicles.list.indexOf(v); if (i >= 0) G.vehicles.list.splice(i, 1);
     v.object.visible = false; v.traffic = null; v.kinematic = false; v.driver = null; v.ai = null; v.vel.set(0, 0, 0); v.owner = 'traffic'; v.siren = false;
     if (!this.pool.has(v.key)) this.pool.set(v.key, []); const p = this.pool.get(v.key);
     if (p.length < 4) p.push(v); else v.dispose();
@@ -99,6 +99,7 @@ export class Traffic {
     if (P.state === 'foot' || P.state === 'down') obs.push({ x: P.pos.x, z: P.pos.z, r: 0.5, player: true });
     for (const n of G.npcs.list) if (n.active && n.onRoad) obs.push({ x: n.pos.x, z: n.pos.z, r: 0.45, ped: true });
     for (const tc of this.cars) this._drive(tc, dt, obs);
+    this._voices(dt);
     this._parkedUpdate();
     this._enforcement(dt);
   }
@@ -174,6 +175,19 @@ export class Traffic {
     // gentle slope pitch on the hill road
     if (tc.edge.hill) { const ahead = L.roadY(p.x + Math.sin(p.h) * 2, p.z + Math.cos(p.h) * 2), back = L.roadY(p.x - Math.sin(p.h) * 2, p.z - Math.cos(p.h) * 2); v.pitchAng = Math.atan2(ahead - back, 4); } else v.pitchAng = 0;
     v.rollAng = 0; v.syncObject();
+  }
+  _voices(dt) {
+    const G = this.game, A = G.audio; if (!A.ready) return;
+    if (!this.vp) this.vp = [];
+    this._vt = (this._vt || 0) - dt;
+    if (this._vt <= 0) {
+      this._vt = 0.6; const cam = G.camera.position;
+      const near = this.cars.filter((tc) => tc.v.object.visible && tc.state === 'lane').map((tc) => ({ tc, d: dist2(tc.v.pos.x, tc.v.pos.z, cam.x, cam.z) })).filter((o) => o.d < 70 * 70).sort((a, b) => a.d - b.d).slice(0, G.interior ? 0 : 3).map((o) => o.tc);
+      for (const slot of this.vp) if (!near.includes(slot.tc)) { A.engineStop(slot.voice); slot.dead = true; }
+      this.vp = this.vp.filter((s) => !s.dead);
+      for (const tc of near) if (!this.vp.some((s) => s.tc === tc)) { const ev = tc.v.spec.electric; const voice = A.engine(ev ? 'ev' : tc.v.type === 'bike' ? 'gas' : 'gas'); if (voice) this.vp.push({ tc, voice }); }
+    }
+    for (const s of this.vp) { const v = s.tc.v; A.engineSet(s.voice, { rpm: clamp(s.tc.speed / 16, 0.05, 1), load: s.tc.speed < 6 && !v.brake ? 0.6 : 0.2, speed: s.tc.speed, pos: v.pos, vol: 0.45, pitch: v.spec.body === 'truck' || v.spec.body === 'bus' ? 0.6 : v.type === 'bike' ? 1.6 : 1 }); }
   }
   _chooseNext(e, dir) {
     const E = nodes[dir > 0 ? e.b : e.a];

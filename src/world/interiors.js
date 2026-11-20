@@ -207,7 +207,10 @@ export class Interiors {
     const G = this.game, E = G.economy, P = G.player;
     const list = kind === 'cafe' ? CAFE_MENU : kind === 'club' ? CLUB_BAR : STORE_ITEMS.filter((i) => !i.smoking || G.settings.smoking);
     const title = kind === 'cafe' ? 'Sol & Salt Café' : kind === 'club' ? 'Pulse Bar' : 'Quik Corner';
-    G.ui.shop(title, kind === 'cafe' ? 'Order at the counter, then take a seat to eat. Food restores health and stamina.' : 'Pay with cash first, then your bank card.', list.map((i) => ({ ...i, desc: i.desc || (i.hp || i.st ? `+${i.hp || 0} health · +${i.st || 0} stamina` : '') })), (it) => {
+    const items = list.map((i) => ({ ...i, desc: i.desc || (i.hp || i.st ? `+${i.hp || 0} health · +${i.st || 0} stamina` : '') }));
+    if (kind === 'cafe' && !E.props.cafeShare && G.missions.done.has('homecoming')) items.push({ id: 'invest', name: PROPERTIES.cafeShare.name, price: PROPERTIES.cafeShare.price, desc: PROPERTIES.cafeShare.desc, kind: 'invest' });
+    G.ui.shop(title, kind === 'cafe' ? 'Order at the counter, then take a seat to eat. Food restores health and stamina.' : 'Pay with cash first, then your bank card.', items, (it) => {
+      if (it.kind === 'invest') { if (E.buyProperty('cafeShare')) { G.ui.big('INVESTMENT', 'You now own 25% of Sol & Salt — $450 a day', '#4ade80'); G.autosave('property'); } return 'close'; }
       if (!E.pay(it.price, `${title}: ${it.name}`)) return;
       if (it.kind === 'cigs') { E.inventory.cigs += 10; G.ui.toast('Cigarettes', 'Open your bag (I) to smoke one. You need a lighter.', 'info'); return; }
       if (it.kind === 'lighter') { E.inventory.lighter = 1; return; }

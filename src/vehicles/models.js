@@ -144,6 +144,12 @@ function buildCar(s, color, opts) {
   }
   if (s.taxi) { const d = new THREE.Mesh(prim('plane', 0.7, 0.18), new THREE.MeshBasicMaterial({ map: signTex('TAXI', { bg: '#fff6c2', fg: '#111', w: 256, h: 64, size: 56 }) })); d.position.set(0, H + 0.14, (P.cabin[1][0] + P.cabin[2][0]) / 2 + 0.152); body.add(d); const d2 = d.clone(); d2.rotation.y = Math.PI; d2.position.z -= 0.304; body.add(d2); }
   const { paint: pmat, lightsF, lightsR } = finish(root, body, paint.build(), trim.build(), P.cabin || P.vanGlass ? glass.build() : null, lf.build(), lr.build(), color, s.body === 'evtruck' ? 0.85 : 0.55);
+  // simple occupant silhouette for AI-driven traffic (hidden when the player drives)
+  const dd = new GeoBuilder(); const sy = Math.min(c + 0.3, H - 0.92), skin = ['#c8927e', '#8a5a3e', '#eac0a2', '#563424', '#b9805f'][Math.floor(Math.random() * 5)];
+  dd.add(prim('capsule', 0.17, 0.28, 3, 8), 0.38, sy + 0.32, seatZ - 0.2, -0.15, 0, 0, 1.1, 1, 0.75, ['#1d3557', '#e63946', '#f1faee', '#2a9d8f', '#333333'][Math.floor(Math.random() * 5)]);
+  dd.add(prim('sphere', 0.1, 10, 8), 0.38, sy + 0.72, seatZ - 0.15, 0, 0, 0, 0.9, 1.1, 1, skin);
+  dd.add(prim('sphere', 0.104, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.45), 0.38, sy + 0.74, seatZ - 0.16, -0.3, 0, 0, 0.9, 1.1, 1, '#2a1f1a');
+  const driverDummy = new THREE.Mesh(dd.build(), shared().trim); driverDummy.visible = false; body.add(driverDummy);
   // driver door (opens outward around a front hinge)
   const doorLen = Math.min(1.15, L * 0.22), doorH = belt - c - 0.08;
   const dz = P.cabin ? P.cabin[0][0] - 0.05 : hl - 0.2 * L;
@@ -163,6 +169,7 @@ function buildCar(s, color, opts) {
     wheels.push({ piv, m, front, r: wr });
   }
   if (s.body === 'offroad') { const sp = new THREE.Mesh(wg, shared().trim); sp.rotation.y = Math.PI / 2; sp.position.set(0, c + 0.9, -hl - 0.15); sp.scale.setScalar(0.9); body.add(sp); }
+  extras.driverDummy = driverDummy;
   return { root, body, wheels, door, lightsF, lightsR, paint: pmat, extras, wheelBase: fa - ra, track: W - ww, seat: [0.38, Math.min(c + 0.3, H - 0.92) - 0.5, seatZ - 0.1], camH: Math.max(1.6, H * 0.85), dims: { L, W, H } };
 }
 

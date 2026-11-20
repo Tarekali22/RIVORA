@@ -150,7 +150,7 @@ export class Missions {
   async collectorCall() {
     const G = this.game;
     await this.talk([['Mr. Vale', 'You helped Navarro. Efficient. I like efficient.'], ['Mr. Vale', 'A loan shark named Rico Feld has been squeezing shop owners in Neon Row. He keeps a ledger.'], ['Mr. Vale', 'Take him down — no killing, I need him scared, not dead — and bring me that ledger.'], ['Mr. Vale', 'Details are in your messages.']]);
-    const rico = { sex: 'm', height: 1.8, build: 0.6, skin: '#d9a382', faceW: 1.0, jaw: 0.8, hair: { style: 'medium', color: '#2a1f1a' }, facial: 'full', brow: 1.2, eyes: '#3b2414', top: { type: 'blazer', color: '#f0ece2', shirt: '#1d1d1d' }, bottom: { type: 'pants', color: '#1d1d1d' }, shoes: { color: '#7a4a2a' }, acc: { chain: true, glasses: true, watch: true } };
+    const rico = { sex: 'm', height: 1.8, build: 0.6, skin: '#d9a382', faceW: 1.0, jaw: 0.8, hair: { style: 'medium', color: '#2a1f1a' }, facial: 'short', brow: 1.2, eyes: '#3b2414', top: { type: 'blazer', color: '#f0ece2', shirt: '#1d1d1d' }, bottom: { type: 'pants', color: '#1d1d1d' }, shoes: { color: '#7a4a2a' }, acc: { chain: true, glasses: true, watch: true } };
     const photo = G.portrait(rico);
     G.phone.addMessage('vale', 'TARGET: Rico Feld (fictional). Loan shark. Usually outside Pulse on Neon Row with one bodyguard. OBJECTIVE: knock him down, take the ledger, drop it at Vista Overlook. REWARD: $4,000, +$1,000 if no bystanders get hurt.', { img: photo, coords: { x: 270, z: 104, label: 'Neon Row' }, actions: [['Accept contract', () => this.start(this.defCollector(rico))]] });
     G.phone.addMessage('vale', 'Accept from this message when you\'re ready.');

@@ -543,14 +543,19 @@ export class City {
     // Muscle Shore outdoor gym (fenced) around (528,150)
     const gx = 532, gz = 150;
     this.B.prop.box(gx, 0.02, gz, 26, 0.04, 22, '#c1b59a', { faces: 'py' });
-    for (const [fx, fz, w, d] of [[gx, gz - 11, 26, 0.08], [gx, gz + 11, 26, 0.08], [gx + 13, gz, 0.08, 22]]) this.B.metal.box(fx, 1.0, fz, w, 2.0, d, '#8f979c');
+    for (const [fx, fz, w, d] of [[gx, gz - 11, 26, 0.08], [gx, gz + 11, 26, 0.08], [gx + 13, gz, 0.08, 22]]) {
+      const len = Math.max(w, d), along = w > d; const n = Math.round(len / 2.6);
+      for (let k = 0; k <= n; k++) { const t = -len / 2 + k * len / n; this.B.metal.box(along ? fx + t : fx, 1.0, along ? fz : fz + t, 0.07, 2.0, 0.07, '#8f979c'); }
+      for (const ry of [0.35, 1.0, 1.95]) this.B.metal.box(fx, ry, fz, along ? len : 0.04, 0.04, along ? 0.04 : len, '#9aa2a7');
+    }
     this.addBox(gx - 13, gz - 11.1, gx + 13, gz - 10.9, 2, -5); this.addBox(gx - 13, gz + 10.9, gx + 13, gz + 11.1, 2, -5); this.addBox(gx + 12.9, gz - 11, gx + 13.1, gz + 11, 2, -5);
     this.sign('MUSCLE SHORE', gx - 13.2, 2.6, gz + 6, -Math.PI / 2, 6, 1.1, { bg: '#ff7a45', fg: '#1a1a1a' });
     this.gymEquip = [];
     const equip = (kind, x, z, rot, label) => { this.gymEquip.push({ kind, x, z, rot }); this.interactPoints.push({ x, z, y: 0, r: 1.6, kind: 'gym:' + kind, id: 'beach_' + kind, rot, label }); };
     // bench press
     this.B.metal.box(gx - 6, 0.45, gz - 5, 0.4, 0.15, 1.6, '#3b3f44'); this.B.prop.box(gx - 6, 0.55, gz - 5, 0.45, 0.12, 1.5, '#b03a2e');
-    this.B.metal.box(gx - 6, 0.6, gz - 5.6, 1.6, 1.2, 0.08, '#555');
+    for (const sx of [-0.62, 0.62]) this.B.metal.box(gx - 6 + sx, 0.6, gz - 5.7, 0.07, 1.2, 0.07, '#555');
+    this.B.metal.add(prim('cyl', 0.025, 0.025, 1.7, 8), gx - 6, 1.18, gz - 5.7, 0, 0, Math.PI / 2, 1, 1, 1, '#c8c8c8');
     equip('bench', gx - 6, gz - 5, 0, 'Bench press');
     // pull-up bar
     this.B.metal.box(gx + 2, 1.25, gz - 7, 0.1, 2.5, 0.1, '#666'); this.B.metal.box(gx + 4, 1.25, gz - 7, 0.1, 2.5, 0.1, '#666'); this.B.metal.box(gx + 3, 2.45, gz - 7, 2.1, 0.06, 0.06, '#aaa');
@@ -915,7 +920,7 @@ export class City {
     this._sigT = (this._sigT || 0) - dt;
     if (this._sigT <= 0) {
       this._sigT = 0.2;
-      const C = { red: [new THREE.Color(3, 0.15, 0.1), new THREE.Color(0.18, 0.02, 0.02)], yellow: [new THREE.Color(3, 1.9, 0.1), new THREE.Color(0.16, 0.12, 0.02)], green: [new THREE.Color(0.2, 3, 0.9), new THREE.Color(0.02, 0.14, 0.06)] };
+      const C = this._sigC || (this._sigC = { red: [new THREE.Color(3, 0.15, 0.1), new THREE.Color(0.022, 0.004, 0.004)], yellow: [new THREE.Color(3, 1.9, 0.1), new THREE.Color(0.02, 0.015, 0.003)], green: [new THREE.Color(0.2, 3, 0.9), new THREE.Color(0.003, 0.02, 0.01)] });
       for (const h of this.heads) {
         const st = L.signalState(h.node, t, h.axis);
         this.bulbIM.setColorAt(h.idx * 3, C.red[st === 'red' ? 0 : 1]); this.bulbIM.setColorAt(h.idx * 3 + 1, C.yellow[st === 'yellow' ? 0 : 1]); this.bulbIM.setColorAt(h.idx * 3 + 2, C.green[st === 'green' ? 0 : 1]);

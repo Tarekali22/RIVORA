@@ -8,6 +8,8 @@ export class Police {
   constructor(game) {
     this.game = game; this.level = 0; this.lastKnown = null; this.seenT = 0; this.unseenT = 0; this.units = []; this.officers = []; this.heli = null;
     this.spawnT = 0; this.arrestT = 0; this.roadblockT = 30; this.searchLabel = '';
+    // officers who actually see a red-light violation react (cameras only issue fines)
+    bus.on('redlight', (e) => { if (this._seesPlayer(60)) { this.report('redlight', 1, e.pos, true); game.ui.toast('Police saw that', 'An officer witnessed you running a red light.', 'bad', 3); } });
   }
   get searching() { return this.level > 0 && this.unseenT > 3; }
   // a crime happened: who saw it?

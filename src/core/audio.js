@@ -2,6 +2,7 @@
 // Mix philosophy: moderate defaults, a soft limiter, cooldowns and a voice budget so streets never get harsh.
 import { clamp, lerp, R } from './util.js';
 
+const fin = (v) => (Number.isFinite(v) ? v : 0);
 export const DEFAULT_LEVELS = { master: 0.7, music: 0.45, ambience: 0.55, voices: 0.6, traffic: 0.5, effects: 0.65, ui: 0.5 };
 
 export class AudioEngine {
@@ -77,11 +78,11 @@ export class AudioEngine {
   }
   panner(pos, ref = 6, roll = 1.2) {
     const p = this.ctx.createPanner(); p.panningModel = 'equalpower'; p.distanceModel = 'inverse'; p.refDistance = ref; p.rolloffFactor = roll; p.maxDistance = 400;
-    if (pos) { if (p.positionX) { p.positionX.value = pos.x; p.positionY.value = pos.y; p.positionZ.value = pos.z; } else p.setPosition(pos.x, pos.y, pos.z); }
+    if (pos) { const x = fin(pos.x), y = fin(pos.y), z = fin(pos.z); if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z); }
     return p;
   }
-  setPannerPos(p, pos) { if (p.positionX) { const t = this.ctx.currentTime; p.positionX.setTargetAtTime(pos.x, t, 0.03); p.positionY.setTargetAtTime(pos.y, t, 0.03); p.positionZ.setTargetAtTime(pos.z, t, 0.03); } else p.setPosition(pos.x, pos.y, pos.z); }
-  far(pos, d = 90) { return pos && this.listenerPos.distanceToSquared(pos) > d * d; }
+  setPannerPos(p, pos) { const x = fin(pos.x), y = fin(pos.y), z = fin(pos.z); if (p.positionX) { const t = this.ctx.currentTime; p.positionX.setTargetAtTime(x, t, 0.03); p.positionY.setTargetAtTime(y, t, 0.03); p.positionZ.setTargetAtTime(z, t, 0.03); } else p.setPosition(x, y, z); }
+  far(pos, d = 90) { if (!pos) return false; const dx = fin(pos.x) - this.listenerPos.x, dy = fin(pos.y) - this.listenerPos.y, dz = fin(pos.z) - this.listenerPos.z; return dx * dx + dy * dy + dz * dz > d * d; }
   cooldown(key, sec) { const t = performance.now() / 1000; if ((this.cool.get(key) || 0) > t) return false; this.cool.set(key, t + sec); return true; }
   // ---- generic one-shot helpers ----
   _env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
@@ -185,7 +186,7 @@ export class AudioEngine {
     this.engines.add(v); return v;
   }
   engineSet(v, { rpm = 0, load = 0, speed = 0, pos, vol = 1, pitch = 1 }) {
-    if (!v || !this.ctx) return; const t = this.ctx.currentTime;
+    if (!v || !this.ctx) return; const t = this.ctx.currentTime; rpm = fin(rpm); load = fin(load); speed = fin(speed);
     if (pos) this.setPannerPos(v.pan, pos);
     if (v.kind === 'ev') { const f = (90 + speed * 22) * pitch; v.o1.frequency.setTargetAtTime(f, t, 0.05); v.o2.frequency.setTargetAtTime(f * 2.01, t, 0.05); v.out.gain.setTargetAtTime((0.025 + Math.min(speed, 40) * 0.0016 + load * 0.03) * vol, t, 0.08); }
     else if (v.kind === 'rotor' || v.kind === 'prop') { v.lfo.frequency.setTargetAtTime((v.kind === 'rotor' ? 12 : 30) + rpm * (v.kind === 'rotor' ? 8 : 25), t, 0.2); v.whine.frequency.setTargetAtTime((v.kind === 'rotor' ? 1400 : 200) + rpm * 500, t, 0.2); v.out.gain.setTargetAtTime((0.12 + rpm * 0.16) * vol, t, 0.15); }
@@ -203,7 +204,7 @@ export class AudioEngine {
 
   // ---- per-frame ambience mix ----
   update(dt, S) {
-    if (!this.ctx) return; const t = this.ctx.currentTime, B = this.beds, set = (g, v, tc = 0.6) => g.gain.setTargetAtTime(v, t, tc);
+    if (!this.ctx) return; const t = this.ctx.currentTime, B = this.beds, set = (g, v, tc = 0.6) => g.gain.setTargetAtTime(fin(v), t, tc);
     const inside = S.indoor;
     this.outdoor.frequency.setTargetAtTime(inside ? 420 : 20000, t, 0.3);
     this.trafficFilt.frequency.setTargetAtTime(inside ? 380 : S.inCar ? 2600 : 20000, t, 0.3);

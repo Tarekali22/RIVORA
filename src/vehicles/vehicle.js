@@ -163,7 +163,7 @@ export class Vehicle {
     const plane = clamp(Math.abs(vF) / s.top, 0, 1);
     this.pitchAng = damp(this.pitchAng, plane * 0.12 + (G.ocean.height(this.pos.x + fx * 2, this.pos.z + fz * 2) - G.ocean.height(this.pos.x - fx * 2, this.pos.z - fz * 2)) * 0.15, 3, dt);
     this.rollAng = damp(this.rollAng, -this.yawRate * 0.25 * plane * 2, 3, dt);
-    if (Math.abs(vF) > 6 && R() < dt * 4) G.audio.splash(this.local(0, -this.L / 2), 0.15);
+    if (Math.abs(vF) > 6 && R() < dt * 4) { const q = this.local(0, -this.L / 2); G.audio.splash(new THREE.Vector3(q.x, this.pos.y, q.z), 0.15); }
   }
   _heli(dt, c) {
     const G = this.game, s = this.spec;
@@ -265,6 +265,7 @@ export class Vehicle {
     if (this.enterT > 0) this.enterT = Math.max(0, this.enterT - dt);
     if (m.extras.rotor) { this._rot = (this._rot || 0) + this.rotor * 28 * dt; m.extras.rotor.rotation.y = this._rot; m.extras.tail.rotation.x = this._rot * 1.7; }
     if (m.extras.prop) { this._rot = (this._rot || 0) + (0.3 + this.throttleP * 2) * 40 * dt * (this.driver ? 1 : 0); m.extras.prop.rotation.z = this._rot; }
+    if (m.extras.driverDummy) m.extras.driverDummy.visible = !!(this.traffic && this.traffic.driverNpc) || (this.ai && this.owner === 'mission') || (this.owner === 'police' && !!this.ai);
     if (m.extras.lightbar) { const t = this.game.time, on = this.siren; const ph = Math.floor(t * 6) % 2; m.extras.lightbar[0].material = on && ph ? S.red : S.dim; m.extras.lightbar[1].material = on && !ph ? S.blue : S.dim; }
     if (this.health < 30 && this.game.fx && R() < dt * (this.disabled ? 10 : 4)) this.game.fx.smoke(this.local(0, this.L / 2 - 0.6), this.pos.y + this.H * 0.7, this.disabled ? 1 : 0.5);
   }
@@ -350,6 +351,10 @@ export class VehicleManager {
     this._pairs(dt);
     for (const v of this.list) { const d2 = dist2(v.pos.x, v.pos.z, G.cam.cam.position.x, G.cam.cam.position.z); if (d2 < 250 * 250 || v.driver) v.visuals(dt, G.env); v.object.visible = d2 < 420 * 420 || !!v.driver; }
     // player in vehicle: seat sync, sounds, EV charge, lights toggles
+    if (!this.beams) { this.beams = new THREE.SpotLight(0xfff1d6, 0, 70, 0.55, 0.45, 1.2); this.beams.target.position.set(0, -2, 20); this.beams.add(this.beams.target); }
+    const pv = P.state === 'vehicle' ? P.vehicle : null;
+    if (pv && pv.type !== 'heli' && pv.type !== 'plane') { if (this.beams.parent !== pv.body) { pv.body.add(this.beams); this.beams.position.set(0, pv.H * 0.45, pv.L / 2 + 0.2); } this.beams.intensity = pv.lightsOn ? 140 : 0; }
+    else if (this.beams.parent) { this.beams.parent.remove(this.beams); this.beams.intensity = 0; }
     if (P.state === 'vehicle' && P.vehicle) {
       const v = P.vehicle; const s = v.m.seat;
       const seat = new THREE.Vector3(s[0], s[1], s[2]); v.body.localToWorld(seat);

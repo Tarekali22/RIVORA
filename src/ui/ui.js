@@ -221,7 +221,7 @@ export class UI {
     rz.addEventListener('touchmove', (e) => { for (const t of e.changedTouches) { const p = look.get(t.identifier); if (!p) continue; I.addLook(t.clientX - p.x, t.clientY - p.y); look.set(t.identifier, { x: t.clientX, y: t.clientY }); } e.preventDefault(); }, { passive: false });
     const lend = (e) => { for (const t of e.changedTouches) look.delete(t.identifier); }; rz.addEventListener('touchend', lend); rz.addEventListener('touchcancel', lend);
     const top = $('#ttop'); top.innerHTML = '';
-    for (const [a, label] of [['pause', 'II'], ['phone', 'PHONE'], ['map', 'MAP'], ['camera', 'CAM']]) { const b = document.createElement('button'); b.textContent = label; b.addEventListener('touchstart', (e) => { e.preventDefault(); I.tap(a); }, { passive: false }); top.appendChild(b); }
+    for (const [a, label] of [['pause', 'II'], ['phone', 'PHONE'], ['map', 'MAP']]) { const b = document.createElement('button'); b.textContent = label; b.addEventListener('touchstart', (e) => { e.preventDefault(); I.tap(a); }, { passive: false }); top.appendChild(b); }
     this._ctx = '';
   }
   _touchContext() {
@@ -232,8 +232,8 @@ export class UI {
     else if (P.state === 'activity' || P.state === 'sit') ctx = 'act';
     if (ctx === this._ctx) return; this._ctx = ctx;
     const S = { foot: [['punch', 'PUNCH'], ['kick', 'KICK'], ['jump', 'JUMP'], ['block', 'BLOCK', 1], ['interact', 'USE'], ['sprint', 'RUN', 1], ['dodge', 'DODGE'], ['vehicle', 'ENTER'], ['crouch', 'CROUCH', 1]],
-      car: [['jump', 'BRAKE', 1], ['horn', 'HORN'], ['vehicle', 'EXIT'], ['lights', 'LIGHTS'], ['radio', 'RADIO']], bike: [['jump', 'BRAKE', 1], ['horn', 'HORN'], ['vehicle', 'EXIT']], boat: [['vehicle', 'EXIT'], ['horn', 'HORN']],
-      heli: [['jump', 'UP', 1], ['crouch', 'DOWN', 1], ['vehicle', 'EXIT']], plane: [['sprint', 'THR +', 1], ['crouch', 'THR −', 1], ['vehicle', 'EXIT']],
+      car: [['jump', 'BRAKE', 1], ['horn', 'HORN'], ['vehicle', 'EXIT'], ['lights', 'LIGHTS'], ['radio', 'RADIO'], ['camera', 'VIEW']], bike: [['jump', 'BRAKE', 1], ['horn', 'HORN'], ['vehicle', 'EXIT'], ['camera', 'VIEW']], boat: [['vehicle', 'EXIT'], ['horn', 'HORN'], ['camera', 'VIEW']],
+      heli: [['jump', 'UP', 1], ['crouch', 'DOWN', 1], ['vehicle', 'EXIT'], ['camera', 'VIEW']], plane: [['sprint', 'THR +', 1], ['crouch', 'THR −', 1], ['vehicle', 'EXIT'], ['camera', 'VIEW']],
       air: [['jump', 'CHUTE']], swim: [['sprint', 'FAST', 1], ['jump', 'CLIMB']], act: [['interact', 'STOP'], ['jump', 'REP'], ['punch', 'REP']] }[ctx];
     const box = $('#tbtns'); box.innerHTML = '';
     for (const [a, label, hold] of S) {

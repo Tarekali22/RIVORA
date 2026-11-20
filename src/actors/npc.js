@@ -49,6 +49,13 @@ export class NPCManager {
   constructor(game) {
     this.game = game; this.list = []; this.max = game.quality.npcs; this.spawnT = 0; this.callers = [];
     this.umbrellaGeo = null;
+    bus.on('npcDown', (victim) => this._summonHelp(victim));
+  }
+  _summonHelp(v) { // a calm bystander walks over and checks on the injured person
+    if (!v || !v.pos) return; let best = null, bd = 25 * 25;
+    for (const n of this.list) { if (!n.active || n === v || n.down || n.role !== 'ped' || ['flee', 'fight', 'call', 'help'].includes(n.state) || n.fixed) continue; const d = dist2(n.pos.x, n.pos.z, v.pos.x, v.pos.z); if (d < bd && n.persona !== 'nervous') { bd = d; best = n; } }
+    if (!best) return; best.state = 'goto'; best.gotoT = { x: v.pos.x + 0.9, z: v.pos.z, then: 'help', heading: Math.atan2(-0.9, 0) }; best.helpTarget = v; best.walkSpeed = 3.2;
+    setTimeout(() => { if (best.active && best.state === 'help') this.game.ui.subtitle(best.name, ['Are you okay? Stay with me!', 'Somebody call an ambulance!', 'Don\'t move, help is coming.'][Math.floor(R() * 3)], 3); }, 2500);
   }
   _make(a, role) {
     const free = this.list.find((n) => !n.active && n.role !== 'fixed');
@@ -68,9 +75,9 @@ export class NPCManager {
   _spawnAmbient() {
     const G = this.game, P = G.player.pos;
     const period = G.env.period, rain = G.env.w.rain;
-    for (let k = 0; k < 10; k++) {
-      const pn = L.pedNodes[Math.floor(R() * L.pedNodes.length)]; if (!pn.ok) continue;
-      const d2 = dist2(pn.x, pn.z, P.x, P.z); if (d2 < 35 * 35 || d2 > 125 * 125) continue;
+    const ring = L.pedNodes.filter((q) => { if (!q.ok) return false; const d2 = dist2(q.x, q.z, P.x, P.z); return d2 > 35 * 35 && d2 < 125 * 125; });
+    for (let k = 0; k < 4 && ring.length; k++) {
+      const pn = ring[Math.floor(R() * ring.length)];
       const dist = L.districtAt(pn.x, pn.z); const D = L.DISTRICTS[dist] || { density: 0.5 };
       let dens = D.density * (period === 'night' ? (dist === 'nightlife' ? 1.2 : 0.35) : period === 'morning' ? 0.8 : 1) * (1 - rain * 0.5);
       if (R() > dens) continue;
@@ -181,6 +188,7 @@ export class NPCManager {
       case 'surrender': A.handsUp = true; if (n.stateT <= 0) n.flee(P.pos); break;
       case 'goto': this._goto(n, dt, A); break;
       case 'staff': A.speed = 0; A.talk = n.talking; this._lookAtPlayer(n, A, d2, true); break;
+      case 'help': A.action = { name: 'pet', p: (this.game.time % 2) / 2 }; if (n.helpTarget) n.heading = Math.atan2(n.helpTarget.pos.x - n.pos.x, n.helpTarget.pos.z - n.pos.z); if (n.stateT <= 0 || !n.helpTarget || !n.helpTarget.down) { n.state = 'call'; n.stateT = 4; n.walkSpeed = n.baseWalk; n.helpTarget = null; } break;
       case 'dance': A.mode = 'activity'; A.activity = 'dance'; A.beat = G.time * 2.03 + n.id * 0.13; A.style = n.id % 3; break;
     }
     if (n.state !== 'down' && n.state !== 'sit' && n.state !== 'lie' && n.state !== 'activity' && n.state !== 'dance') this._ambientSounds(n, dt, d2);
@@ -248,7 +256,7 @@ export class NPCManager {
   _goto(n, dt, A) {
     const g = n.gotoT; if (!g) { n.state = 'walk'; return; }
     const dx = g.x - n.pos.x, dz = g.z - n.pos.z, d = Math.hypot(dx, dz);
-    if (d < 0.4) { n.state = g.then; n.stateT = 20 + R() * 40; n.heading = g.heading ?? n.heading; if (g.y !== undefined) n.pos.y = g.y + 0.5 - 0.5; if (g.then === 'sit') { n.pos.x = g.x - Math.sin(g.heading) * 0.45; n.pos.z = g.z - Math.cos(g.heading) * 0.45; n.pos.y = (g.y ?? 0) + 0.02; } return; }
+    if (d < 0.4) { n.state = g.then; n.stateT = g.then === 'help' ? 7 : 20 + R() * 40; n.heading = g.heading ?? n.heading; if (g.y !== undefined) n.pos.y = g.y + 0.5 - 0.5; if (g.then === 'sit') { n.pos.x = g.x - Math.sin(g.heading) * 0.45; n.pos.z = g.z - Math.cos(g.heading) * 0.45; n.pos.y = (g.y ?? 0) + 0.02; } return; }
     n.heading = dampAngle(n.heading, Math.atan2(dx, dz), 6, dt); n.speed = damp(n.speed, n.walkSpeed, 4, dt);
     n.pos.x += Math.sin(n.heading) * n.speed * dt; n.pos.z += Math.cos(n.heading) * n.speed * dt; n.pos.y = this.game.city.surfaceHeight(n.pos.x, n.pos.z, n.pos.y + 0.5); A.speed = n.speed;
     n.stuckT += dt; if (n.stuckT > 8) { n.stuckT = 0; n.state = 'walk'; if (n.seat) n.seat.taken = false; }

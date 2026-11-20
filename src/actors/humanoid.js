@@ -82,6 +82,7 @@ export function buildHumanGeometry(a) {
   at('hips', prim('cyl', 0.152 * hw, 0.155 * hw, 0.05, 16), 0, 0.075, 0, 0, 0, 0, 1, 1, 0.78, shadeHex(bc, 0.6));
   at('spine', capsule(0.13, 0.1), 0, 0.09, 0, 0, 0, 0, 1.12 * (f ? 0.95 : 1), 1, 0.8, top.type === 'blazer' ? top.shirt || '#f2f2f2' : tc);
   at('chest', capsule(0.155, 0.1), 0, 0.09, -0.005, 0, 0, Math.PI / 2, 0.85, 1.32 * sw * muscle * 0.92, 0.78, tc);
+  at('chest', prim('sphere', 0.07, 14, 8), 0, 0.2, -0.012, 0, 0, 0, 2.55 * sw * (f ? 0.85 : 1), 0.62, 1.05, top.type === 'tank' ? skin : tc); // trapezius slope
   if (f) { at('chest', prim('sphere', 0.062, 10, 8), 0.068, 0.065, 0.085, 0, 0, 0, 1, 0.9, 0.85, tc); at('chest', prim('sphere', 0.062, 10, 8), -0.068, 0.065, 0.085, 0, 0, 0, 1, 0.9, 0.85, tc); }
   if (top.type === 'blazer') {
     at('chest', prim('box', 0.11, 0.24, 0.02), 0, 0.07, 0.112, 0, 0, 0, 1, 1, 1, top.shirt || '#f4f4f2');
@@ -127,7 +128,7 @@ export function buildHumanGeometry(a) {
   const fh = a.facial || 'none';
   if (fh === 'stubble' || fh === 'short' || fh === 'full') {
     const col = fh === 'stubble' ? mixHex(skin, hairC, 0.32) : hairC; const rr = fh === 'full' ? 0.112 : fh === 'short' ? 0.1075 : 0.1062;
-    at('head', new THREE.SphereGeometry(rr, 18, 8, Math.PI * 0.06, Math.PI * 0.88, Math.PI * 0.56, Math.PI * 0.34), 0, 0.1, 0.012, 0, 0, 0, 0.88 * (a.faceW || 1), 1.12, 1.0, col);
+    at('head', new THREE.SphereGeometry(rr, 18, 8, Math.PI * 0.04, Math.PI * 0.92, Math.PI * (fh === 'full' ? 0.6 : 0.63), Math.PI * (fh === 'full' ? 0.32 : 0.28)), 0, 0.1, 0.012, 0, 0, 0, 0.88 * (a.faceW || 1), 1.12, 1.0, col);
   }
   if (fh === 'mustache' || fh === 'short' || fh === 'full') at('head', prim('box', 0.05, 0.012, 0.012), 0, 0.066, 0.117, 0, 0, 0, 1, 1, 1, hairC);
   if (a.acc && a.acc.earbuds) for (const s of [-1, 1]) at('head', prim('capsule', 0.006, 0.012, 2, 6), s * 0.098, 0.093, 0.012, 0, 0, 0, 1, 1, 1, '#f5f5f5');
@@ -137,7 +138,7 @@ export function buildHumanGeometry(a) {
   for (const side of ['L', 'R']) {
     const s = side === 'L' ? 1 : -1;
     const am = muscle * (f ? 0.85 : 1);
-    at('arm' + side, prim('sphere', 0.062 * am, 12, 8), 0, -0.01, 0, 0, 0, 0, 1, 1, 1, sleeveNone ? skin : tc);
+    at('arm' + side, prim('sphere', 0.057 * am, 12, 8), 0, -0.012, 0, 0, 0, 0, 1, 1, 1, sleeveNone ? skin : tc);
     if (sleeveLong) at('arm' + side, capsule(0.052 * am, 0.2), 0, -0.145, 0, 0, 0, 0, 1, 1, 1, tc);
     else if (sleeveNone) at('arm' + side, capsule(0.047 * am, 0.2), 0, -0.145, 0, 0, 0, 0, 1, 1, 1, skin);
     else { at('arm' + side, capsule(0.056 * am, 0.08), 0, -0.07, 0, 0, 0, 0, 1, 1, 1, tc); at('arm' + side, capsule(0.046 * am, 0.15), 0, -0.175, 0, 0, 0, 0, 1, 1, 1, skin); }
