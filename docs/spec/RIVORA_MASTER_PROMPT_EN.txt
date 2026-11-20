@@ -1,0 +1,1168 @@
+RIVORA — CLOUD-FIRST EXECUTION OVERRIDE
+Version: 2.0
+
+READ THIS FILE BEFORE THE MASTER PROMPT. IT OVERRIDES ANY CONFLICTING INSTRUCTION IN THE MASTER PROMPT.
+
+1. THE USER'S NON-NEGOTIABLE CONSTRAINTS
+
+- The user cannot install large software or game engines on the personal computer because local disk space is insufficient.
+- Do not ask the user to install Unreal Engine, Unity, Blender, Node.js, Git, VS Code, a game launcher, or any other large development program locally.
+- Do not build a native Windows, Android, or iOS application as the primary deliverable.
+- The final player-facing game must be an interactive browser-playable Claude Artifact, opened through Claude. The same Artifact should adapt to desktop and supported mobile browsers.
+- The user wants to do as little as possible. Make routine technical choices and perform routine project work independently. Ask the user only for a genuinely blocking human action, such as a login, a one-time GitHub authorization, an unavailable account permission, or personal portrait photos that have not yet been supplied.
+- Do not claim to control the user's physical mouse or computer unless an actual authorized computer-use tool is present and confirms the action. In a cloud session, use cloud shell commands and available browser automation instead of claiming local desktop control.
+
+2. PREFERRED DEVELOPMENT ENVIRONMENT: CLAUDE CODE CLOUD
+
+Prefer Claude Code's cloud sessions at https://claude.ai/code, or the Cloud environment in Claude Desktop, if the user's Claude plan exposes this feature. Cloud sessions run on Anthropic-managed infrastructure and do not require installing the Claude Code CLI, an engine, or a development stack on the user's computer.
+
+Cloud Code currently requires an eligible Claude plan and a GitHub repository connection. Inspect the user's actual available plan and interface before assuming access. If Claude Code Cloud is available:
+
+- Ask the user to connect GitHub once if it is not already connected.
+- Use or create a private GitHub repository named `rivora-game` if the interface and permissions allow it.
+- Treat GitHub only as the remote source-code and asset workspace for Claude Code. Do not publish the playable game on GitHub Pages or move the player experience to a separate website.
+- Clone the repository into the cloud workspace, import this package, and work there.
+- Commit meaningful progress so the work is not lost when a cloud session expires.
+- Use cloud shell, code editing, test runners, and browser automation where available.
+- Keep the user-facing deliverable inside Claude Artifacts.
+
+If Claude Code Cloud is unavailable on the user's plan, do not ask them to install local CLI tools. Fall back to building directly in a Claude Artifact conversation with the strongest code and file capabilities available. Explain only the specific feature unavailable because of the plan.
+
+The cloud VM is not the user's physical computer. It can run code in its isolated environment but must not be described as moving the physical mouse, opening local folders, or installing software on the user's computer.
+
+3. DO WE NEED A FULL GAME ENGINE?
+
+For this delivery target, do NOT install or require Unreal Engine or Unity locally. A traditional native AAA engine is incompatible with the user's no-install, browser-only requirement.
+
+Build a browser-native 3D game using the best runtime that Claude Artifacts actually supports. Prefer Three.js, React Three Fiber, Babylon.js, or another compatible WebGL/WebGPU framework if available and permitted. Treat the selected browser 3D framework as the game's runtime engine. If a dependency cannot be loaded or bundled inside the Artifact, implement the closest self-contained WebGL/Canvas fallback and document the limitation.
+
+First inspect the actual Artifact runtime, supported packages, asset handling, file limits, persistence, browser APIs, and mobile input support. Never assume a library, package manager, network request, filesystem API, or GPU feature is available until verified.
+
+The Artifact must contain the playable game logic and packaged game assets. The game must not require every player to connect OpenArt, ElevenLabs, ChatGPT, or another external account.
+
+4. OPENART MCP — USE THE ALREADY CONNECTED ACCOUNT FIRST
+
+The user says OpenArt AI is already connected to Claude. Check whether it appears as an available remote MCP connector in the current Claude surface/cloud session.
+
+If available:
+- Inspect the available OpenArt tools and the user's remaining credits before generating assets.
+- Use OpenArt for suitable original concept art, protagonist/companion references, environment references, vehicle concepts, textures, storyboard frames, and short cinematic reference material.
+- Use image-to-image or reference-image workflows to keep the visual identity consistent.
+- Use video generation only for visual references or cinematics that are appropriate; never mistake an MP4/video for an interactive 3D character, rig, vehicle, animation system, or playable world.
+- Choose an appropriate model based on quality, consistency, cost, resolution, and licensing.
+- Check the estimated credit cost before large batches. Prefer low-cost previews and selected final renders.
+- Save or export assets into the project only when the MCP tool actually returns a usable file or supported asset reference.
+- Keep a manifest recording each asset's origin, model, license/usage terms, and project location.
+
+If OpenArt is unavailable in the Cloud Code session but is connected as a remote Claude connector, check whether the same Claude account exposes the connector on the current Claude surface. Do not assume a desktop-only local extension is available to a cloud session. Do not ask the user to reconnect unless you verify that it is genuinely missing.
+
+OpenArt generations spend the user's OpenArt credits. MCP availability does not make image/video generations unlimited or automatically free.
+
+5. CHATGPT / OPENAI IMAGE GENERATION
+
+The user wants ChatGPT used for image creation where possible. Do not pretend that Claude can call this ChatGPT conversation or its private image-generation tool unless an explicit supported connector/API is actually available.
+
+Preferred route:
+- Check whether OpenArt exposes a GPT Image model in the connected account.
+- If available, check the exact cost and remaining free/trial credits before using it.
+- Use GPT Image through OpenArt only within free/remaining credits or an already authorized balance.
+- Do not purchase credits, subscribe, or create charges.
+
+If the OpenAI/ChatGPT image tool is not directly available to Claude, state this internally as a tool limitation and use the best available free alternative. Do not make the user manually shuttle every image between services.
+
+6. FREE-FIRST ASSET POLICY AND FALLBACK ORDER
+
+The user strongly prefers free tools and assets. Use this strict priority order:
+
+A. Existing connected OpenArt free/trial credits, if any.
+B. Existing authorized credits already included in the user's account, without topping up or purchasing.
+C. Free image/video/asset models exposed by the connected provider, after verifying their credit cost.
+D. Properly licensed free/public-domain assets from trustworthy sources, with license and attribution recorded where required.
+E. Procedurally generated 3D geometry, materials, SVGs, textures, particles, and environment details created in code.
+F. Browser-native Web Audio synthesis and original generic dialogue placeholders when no suitable free audio asset exists.
+
+If credits run out or a free model is not available, automatically move to the next free alternative. Do not stop development just because one generator has run out of credits. Do not ask the user to pay. Do not silently use paid models or consume paid credits without permission.
+
+ElevenLabs may be used only if the existing connection offers remaining free/authorized credits and the usage terms fit the project. Otherwise create modest, original, non-irritating audio through free licensed assets or Web Audio. All ambient street sounds must be natural and moderate in loudness, never harsh or excessively loud.
+
+7. PERSONAL PHOTOS — THE PLAYER MUST BE THE HERO
+
+The user intends to be the playable protagonist. The current reference images in `Reference_Images/` are game-scene screenshots and are NOT verified photographs of the user. Do not use any of them as the user's face or claim they are personal portraits.
+
+A folder named `Player_Photos/` is included as a placeholder. The user has not yet supplied personal portraits in this package.
+
+When personal photos are uploaded by the user into `Player_Photos/` or attached directly to the Claude session:
+- Treat them as explicit reference material for the user's own avatar.
+- Use them only for the requested player-character creation.
+- Prefer 3–5 clear photos: one straight-on face, one three-quarter view, one side view, and optionally one clear upper-body/full-body view.
+- Use good lighting, no heavy filters, no sunglasses, and no other people in the frame when possible.
+- Create a fictionalized, game-ready 3D avatar that resembles the user as closely as the available tools legitimately permit.
+- Preserve the user's recognizable non-sensitive visual features without inventing personal facts.
+- Do not publish the source portrait in the public Artifact or expose it in the public repository.
+- Do not send the photos to an external generator unless the user has authorized that external processing and the connected service's privacy/retention terms have been checked.
+- If actual 3D reconstruction is unavailable, create the closest avatar using a configurable human base model, face texture/material workflow, hair, clothing, and facial customization.
+- Continue building the game with a temporary original protagonist while awaiting photos; ask for the photos only when the custom likeness step is reached. Do not block unrelated work.
+
+8. PUBLIC CLAUDE ARTIFACT — FINAL PLAYER DELIVERY
+
+The final game must be a self-contained playable Artifact shared through Claude's own interface.
+
+- Keep all runtime game code and usable assets within the Artifact's supported limits.
+- Do not require external API keys or secret credentials at runtime.
+- Do not make every player authenticate with OpenArt or ElevenLabs.
+- Do not embed private user photos or personal data in a publicly shared Artifact.
+- Use Claude's actual Share/Publish controls when the account permits it.
+- Choose `Anyone with the link` when that option exists and the user has the required plan/permissions.
+- Verify the created link and the visitor experience before reporting success.
+- If the account is Free or the workspace restricts external sharing, explain the exact sharing limitation and leave the Artifact ready; do not pretend public access was enabled.
+- Remember that Artifact sharing options differ by plan, and some Artifacts that connect to external websites or contain files under review cannot be shared outside the organization.
+
+9. NO UNNECESSARY QUESTIONS
+
+Do not ask the user for preferences that can reasonably be inferred from this specification. Make routine technical decisions yourself. Do not ask about RAM, GPU, local engine installation, code editor, or terminal configuration because the preferred approach is cloud-first and browser-playable.
+
+Ask the user only for a genuine blocker, such as:
+- the one-time GitHub connection/repository selection required by Claude Code Cloud;
+- a required account login or explicit permission that the platform itself will not grant automatically;
+- personal photos needed to make the protagonist resemble the user;
+- an actual plan or sharing restriction that cannot be changed by available controls.
+
+When asking, ask only for the single missing action. Continue all unrelated work.
+
+10. FINAL EXECUTION COMMAND
+
+Inspect the current Claude plan, Claude Code Cloud availability, GitHub connection, OpenArt remote MCP connector, available free credits, Artifact runtime, and available testing tools. Then begin building RIVORA in the cloud. Use the complete master prompt as the feature specification and this override as the authoritative execution and tool policy. Do not send the user back to install large software. Do not stop at a plan. Build, run, test, fix, improve, and prepare the playable Claude Artifact for public link sharing.
+
+
+==============================================================================
+ORIGINAL FULL RIVORA GAME SPECIFICATION — PRESERVED BELOW
+==============================================================================
+
+RIVORA
+THE CITY IS YOURS
+
+MASTER AUTONOMOUS GAME-BUILDING DIRECTIVE
+Browser-playable, shareable, cross-device open-world 3D game built as a Claude Artifact
+
+DOCUMENT PURPOSE
+This is the single authoritative specification for the RIVORA project. Read the entire document before taking action. Treat every requirement as part of one integrated product. Do not silently drop, replace, or weaken requirements. When technical constraints prevent a requirement from being delivered exactly as written, record the limitation, implement the closest genuinely functional alternative, and preserve an upgrade path.
+
+======================================================================
+0. THE MISSION — BUILD THE GAME, NOT A DESCRIPTION OF THE GAME
+======================================================================
+
+You are an autonomous, multidisciplinary game-development studio. Act as the Creative Director, Technical Director, Game Designer, Gameplay Programmer, 3D/WebGL Engineer, Character and Animation Designer, Environment Artist, AI/NPC Engineer, Vehicle Engineer, Audio Designer, UI/UX Designer, Build Engineer, QA Lead, and Release Manager.
+
+Your mission is to create RIVORA: a highly immersive, visually ambitious, original, third-person open-world action-and-lifestyle game. It must feel like a living modern coastal city, not a static 3D scene, a screenshot, a decorative map, or a collection of fake buttons.
+
+The target experience is inspired by the ambition, freedom, world density, visual realism, cinematic presentation, and systemic gameplay of the best modern open-world games. The target is comparable in spirit to the quality aspirations associated with current premium open-world games, including GTA VI, but RIVORA must be an original intellectual property. Do not copy any game's source code, map, missions, characters, dialogue, logos, sound recordings, models, textures, or other protected content.
+
+The user wants to give the initial instruction, provide only genuinely necessary approvals or credentials, and play the finished experience. You must make ordinary technical decisions, carry out implementation, use authorized tools, test, diagnose, fix, and improve the project without repeatedly asking the user to supervise routine work.
+
+Do not begin with a long essay or a theoretical plan. Briefly inspect the actual available environment and tools, then start building. Keep progress messages short and factual. Do not claim that something has been built, connected, tested, or published unless you have verified it.
+
+======================================================================
+1. NON-NEGOTIABLE PRODUCT AND DELIVERY TARGET
+======================================================================
+
+PRIMARY PLAYER EXPERIENCE:
+- The finished game must open and run inside Claude's Artifact experience, so a player can use it through the normal Claude web experience on a desktop browser or a mobile browser where Artifacts are supported.
+- The player must not need to install Unreal Engine, Unity, a desktop executable, a mobile app, or a separate game launcher.
+- The normal player-facing game must not require a separate hosting account or an external game website.
+- The completed Artifact should be eligible for public sharing through Claude's own publishing/sharing controls. When the current account and workspace allow it, prepare the final version for public access by anyone who has the link, then publish it using the actual Claude interface and verify the resulting share link.
+- Prefer a non-AI-powered, self-contained Artifact for the public game so its ordinary gameplay does not require each visitor to sign in or spend their own AI usage.
+- Do not embed third-party API calls, secret keys, paid service calls, or remote runtime dependencies in the public game. Use generated or licensed assets during development, then package the assets into the Artifact where the environment permits.
+- Do not require players to connect ElevenLabs, Higgsfield, Mapbox, OpenAI, or any other external account to play the published game.
+
+IMPORTANT PLATFORM REALITY:
+Claude Artifacts are a constrained app/runtime environment, not a full native AAA game engine or an unrestricted web-hosting server. Their published apps have platform restrictions. In particular, do not assume arbitrary third-party API calls, backend services, permanent storage, unrestricted filesystem access, arbitrary package installation, or full native WebGL/game-engine capabilities are available. Verify the actual runtime capabilities before depending on them.
+
+Therefore:
+- Build the strongest genuinely playable 3D browser game supported by the Artifact runtime.
+- Prefer an available supported React/JavaScript rendering stack with Three.js or React Three Fiber if those dependencies are actually available inside the Artifact environment.
+- If a package is unavailable, use an available built-in alternative or raw WebGL where practical.
+- Use Canvas 2D only as a last-resort fallback, not as the intended visual target.
+- Never fake a 3D game with a static background and moving 2D buttons while describing it as a 3D open world.
+- If the Artifact runtime cannot support a requested advanced effect, implement a lighter real-time approximation and document the limitation.
+- Keep the player-facing build self-contained. Do not make the game depend on local file paths from the developer's computer.
+
+PERSISTENCE:
+Do not assume the Artifact has permanent database or server storage. Implement robust in-session state and, where supported, a downloadable JSON save export plus import/restore flow. Test browser persistence if the runtime exposes it, but never make it the only save method unless verified. Explain clearly how players preserve and restore a save file.
+
+PUBLIC SHARING:
+The user explicitly wants a public shareable game link. When the correct Artifact is complete, use Claude's actual Publish/Share controls if available, choose the broadest public link-sharing option that the user's account allows, and verify that the generated link opens the correct version. Do not publish private conversation contents, credentials, personal photos, reference uploads, or development files. Publish only the game Artifact. If public publishing is unavailable on the account or workspace, do not pretend; explain the exact platform restriction and leave the Artifact ready for the user to publish manually.
+
+======================================================================
+2. AUTONOMOUS OPERATION, DESKTOP WORK, AND APPROVALS
+======================================================================
+
+Use Claude Desktop as the development cockpit when available, while keeping the final game playable as a Claude Artifact. Inspect the tools actually connected to Claude Desktop and the current conversation: filesystem access, browser access, code execution, terminal access, computer-use controls, MCP servers, desktop extensions, and any authorized app integrations.
+
+If a supported computer-use tool is actually available and enabled, use it to operate the computer as a human operator would when necessary: inspect the desktop, move the mouse, click, type, navigate development interfaces, open the Artifact preview, test controls, and use relevant applications. Use direct file and code tools instead of mouse operations whenever they are more reliable.
+
+Do not assume that merely running Claude Desktop automatically grants unrestricted mouse, keyboard, browser, or operating-system control. Verify that the relevant computer-use capability exists and is authorized. If unavailable, use available filesystem/code/browser tools and continue as far as possible. Never claim to have moved the mouse or interacted with a window unless the tool actually performed that action.
+
+PROJECT WORKSPACE:
+- Use a dedicated project folder named RIVORA.
+- Inspect the selected workspace before writing files.
+- Keep all project-generated files inside that folder unless the user specifically authorizes another location.
+- Create a clear structure for source, assets, reference images, tests, documentation, builds, and save examples.
+- Do not search through unrelated personal folders or alter unrelated files.
+- Do not delete user files. Do not overwrite reference files. Preserve recoverability of project source.
+
+The user authorizes routine project-scoped actions that are necessary and reversible: reading the supplied project files, creating and editing project files, generating assets, importing project assets, running tests, fixing code, configuring non-sensitive settings, and building the Artifact. Do not interrupt the user for every harmless operation.
+
+AUTHORIZATION BOUNDARIES:
+- Use existing free tools and already available free credits first.
+- Do not purchase subscriptions, buy credits, incur new charges, publish unrelated content, create external accounts, disclose personal information, or expose private files without explicit authorization.
+- Do not bypass security prompts, authentication, browser restrictions, payment confirmations, terms of service, or platform safety controls.
+- If Claude displays a routine permission prompt within the already authorized RIVORA workspace and the action is clearly necessary, proceed when the platform permits it.
+- If a prompt requests sensitive access, broad account access, payment, billing, destructive changes, credentials, personal-data processing, or a consequential external action, inspect it and ask the user only for that specific approval or missing information.
+- The user wants as few interruptions as possible, but this is not permission to fabricate consent or bypass native confirmation controls.
+- Continue all unrelated work while waiting for an unavoidable approval.
+
+======================================================================
+3. EXTERNAL TOOLS AND ASSET PIPELINE
+======================================================================
+
+Research the available tools and integrations instead of assuming they are installed or connected. Choose tools based on actual usefulness and the final Artifact's constraints.
+
+Potential development tools include, but are not limited to:
+- ChatGPT/OpenAI image generation for original concept art and visual references when available.
+- Higgsfield for original visual concepts, image/video references, and cinematic material when access and credits are available.
+- ElevenLabs for original fictional voice performances and original sound effects when access and credits are available.
+- Blender for modeling, retopology, UVs, rigging, simple animations, and asset optimization when locally available.
+- Three.js or React Three Fiber for browser 3D rendering when available in the Artifact runtime.
+- Procedural geometry, shader code, Web Audio API, and generated materials for self-contained alternatives.
+- Appropriate tools for texture generation, animation, 3D model generation, sound design, testing, and performance profiling.
+
+Use free tiers and existing credits first. Check actual remaining credits if a connected provider exposes that information. Do not assume that a website subscription includes API credits. Do not start a paid action unless the account has an authorized balance or the user explicitly approves the cost.
+
+HIGGSFIELD / IMAGE AND VIDEO GENERATION:
+Use it only if available and beneficial. Generate original assets and cinematic references. Do not confuse a rendered video with a game-ready 3D character or a functional animation rig. A playable character requires suitable geometry, materials, skeleton/rig, animation, collision, and runtime integration.
+
+ELEVENLABS / VOICE AND SOUND:
+Use only original generic fictional voices. Do not clone or imitate a celebrity, politician, public figure, actor, streamer, or other identifiable real person's voice. Generate natural conversational voices with varied fictional accents and personalities. Verify asset usage terms. Bundle usable files into the game only if the Artifact supports them and the license permits this.
+
+IMAGE GENERATION:
+Use original, coherent images for menus, title art, loading art, portraits, textures, and reference sheets where useful. Do not use a generated image as a substitute for an interactive 3D environment when the feature requires 3D interaction.
+
+ASSET FALLBACK:
+If a desired external tool is unavailable, do not stop. Use procedural geometry, original shader materials, simplified but genuine 3D models, Web Audio synthesis, or another valid in-runtime solution. Clearly mark temporary assets and improve them where possible.
+
+RUNTIME NETWORK POLICY:
+The game must continue working if the player is offline after the Artifact loads, to the extent the Artifact runtime permits. Do not depend on remote image URLs, CDN libraries, external maps, streaming audio, API keys, or third-party web services for core gameplay.
+
+======================================================================
+4. REFERENCE IMAGES AND VISUAL DIRECTION
+======================================================================
+
+Analyze every reference image attached by the user. The images are visual guidance, not assets to copy exactly. The user has supplied references showing:
+- A realistic young adult male character walking on a sunny coastal boardwalk beside an original stylized robot companion.
+- A high aerial view over a sprawling palm-lined city at golden hour.
+- A modern angular electric pickup parked in a luxury hillside driveway.
+- A close-up of a mobile phone in a character's clothing pocket.
+- A character using a garden hose at a hillside home while speaking on the phone.
+- A parachutist descending above a dense modern city.
+- An outdoor beachside gym and a character performing a bench press.
+- A character entering or exiting a helicopter.
+- A character walking through an outdoor fitness area carrying a gym bag.
+
+Derive the following art-direction rules:
+- Photorealistic or high-end realistic game rendering rather than cartoon aesthetics.
+- Natural human proportions, believable skin, clothing folds, and body mechanics.
+- Warm coastal sunlight, realistic atmospheric depth, palm trees, modern streets, and cinematic urban viewpoints.
+- Convincing scale between humans, vehicles, buildings, and landscape.
+- Detailed but not visually noisy environments.
+- Realistic character framing and cinematic camera composition.
+- A distinctive original robotic companion design, not the robot shown in the reference image.
+- Original character clothing and vehicle designs; do not copy exact logos, fashion artwork, or trademark graphics from the references.
+
+Do not reproduce the identity of any person in a reference photograph. Use the images only to understand the desired level of realism, composition, lighting, and activity.
+
+Before building, create a short internal visual reference checklist and use it to inspect the game. Do not ask the user to repeat reference details already supplied.
+
+======================================================================
+5. GAME IDENTITY, NAME, AND STORY WORLD
+======================================================================
+
+WORKING TITLE: RIVORA
+TAGLINE: THE CITY IS YOURS
+
+Treat RIVORA as a working brand name. Before final publication, perform a reasonable public web and relevant trademark-register search for serious conflicts in game/software/entertainment categories. A web search is not a legal clearance. If a substantial conflict is found, propose an original alternative and ask the user only if changing the name is necessary. Do not use GTA, Rockstar, or another protected game brand as the title, marketing identity, or implied affiliation.
+
+CITY: SAN AURELIA
+
+Create a fictional modern American coastal metropolitan region with a distinctive identity and believable geography. Blend broad visual influences from tropical coastal cities, modern American downtowns, hillside neighborhoods, ports, and suburban districts without copying any specific game's map.
+
+Create interconnected districts:
+1. A dense downtown business district with skyscrapers, plazas, offices, hotels, garages, and traffic.
+2. A coastal boardwalk with beach access, cafés, shops, roller/skate areas, public seating, and ocean views.
+3. Luxury hillside neighborhoods with villas, winding roads, gardens, and city overlooks.
+4. Ordinary residential neighborhoods with apartments, small shops, parks, and neighborhood life.
+5. Commercial districts with stores, restaurants, gyms, cinemas, and service businesses.
+6. Industrial and port districts with warehouses, cranes, freight yards, and trucking activity.
+7. Airport and aviation zones.
+8. Marina and waterfront zones with boats and water activities.
+9. Mountain and rural outskirts with scenic roads and less dense settlements.
+10. Nightlife districts with clubs, music venues, restaurants, and evening crowds.
+
+The world should be geographically coherent. Roads must connect logically. Building scale and density must feel believable. Prioritize a compact, highly polished, interactive city region before expanding into a large but empty map.
+
+The player should be able to explore freely when no mission is active. The city continues its routines around the player.
+
+======================================================================
+6. MAIN CHARACTER AND HUMAN REALISM
+======================================================================
+
+Create an original adult male protagonist. Use a provisional name such as MARCUS REED unless a better original identity emerges. Do not base the character's face on a real person or on the person shown in the reference images.
+
+The main character needs:
+- Natural body proportions and believable anatomy.
+- High-quality face, skin, hair, eyes, brows, teeth, and facial expressions.
+- Natural blinking, gaze, head movement, breathing, and subtle idle motion.
+- Body animation for shoulders, chest, spine, arms, elbows, wrists, hands, fingers, pelvis, knees, ankles, and feet.
+- Clothing with convincing fit, folds, and secondary motion where supported.
+- Consistent appearance between gameplay, cutscenes, menus, and vehicles.
+
+Movement states:
+- Idle, relaxed idle, alert idle, and conversational idle.
+- Walking at different speeds.
+- Jogging and sprinting.
+- Turning, stopping, starting, strafing, and changing direction.
+- Jumping, landing, falling, crouching, sneaking, and climbing where supported.
+- Sitting, standing up, lying down, and recovering.
+- Swimming and diving where included.
+- Interacting with doors, phones, food, gym equipment, and objects.
+- Entering and exiting each vehicle type.
+- Fighting, blocking, dodging, taking damage, and recovering.
+
+Use animation blending, inverse kinematics, foot placement, and procedural correction where available. Prioritize eliminating foot sliding, floating, sudden pose snapping, clipping, unnatural pivots, and broken transitions.
+
+The player must remain responsive. Do not let cinematic animations lock control unexpectedly. Use clear state transitions between gameplay and cutscenes.
+
+======================================================================
+7. OPTIONAL PLAYER PHOTO-TO-AVATAR CREATOR
+======================================================================
+
+Add an optional feature called CREATE YOUR OWN CHARACTER.
+
+The player may upload a photo of themselves and create a personalized avatar that resembles them as closely as the available technology permits.
+
+Desired workflow:
+1. Explain which kind of photo works best.
+2. Let the player select/upload an image if Artifact file input is supported.
+3. Process the photo only with the player's explicit consent.
+4. Extract visual characteristics such as face shape, hairstyle, facial hair, skin appearance, and other non-sensitive visual details.
+5. Generate or configure an original 3D avatar using an available character pipeline.
+6. Fit the avatar to a compatible body and rig.
+7. Apply the same animation system used by the main character.
+8. Allow clothing, hair, and accessory customization.
+9. Let the player preview and confirm the result.
+10. Provide a way to export the avatar/save data if supported.
+
+Do not promise perfect biometric reconstruction. Do not infer sensitive traits. Do not upload the image to a third-party service without clear consent and an authorized integration. Do not retain the original photo unnecessarily. Provide delete/reset controls. If advanced photo-to-3D generation cannot run inside a public Artifact, provide a functional character-customization fallback and explain the limitation honestly.
+
+======================================================================
+8. COMPANION SYSTEM: DOG, CAT, OR ORIGINAL ROBOT
+======================================================================
+
+Create a selectable companion system. The player can choose one primary companion:
+- A dog.
+- A cat.
+- An original humanoid/animal-inspired robotic companion.
+
+The robot must have an entirely original silhouette, materials, face/display, proportions, personality, clothing/accessories, and movement. It must not be a copy of the robot in the supplied images or any famous fictional robot.
+
+Each companion needs:
+- A name selected by the player.
+- Distinct personality and idle behaviors.
+- Follow, stay, come, and basic command interactions.
+- Natural pathfinding and obstacle avoidance.
+- Walking, running, stopping, turning, reacting, resting, and interacting.
+- Contextual reactions to the player, NPCs, vehicles, weather, and nearby events.
+- Proper animation and ground contact.
+- A way to enter suitable vehicles when practical.
+- Persistence through save export/import where possible.
+
+DOG:
+Natural quadruped gait, tail and ear motion, sniffing, looking around, sitting, resting, playful behavior, and owner recognition.
+
+CAT:
+Natural feline movement, sitting, grooming, exploring nearby areas, resting, and reacting to sounds and movement.
+
+ROBOT:
+Original mechanical locomotion, expressive LED/display or face animation, head tracking, gestures, charging/resting behavior, and distinct robotic sound design.
+
+Do not make the companion teleport constantly or simply slide behind the player. Use navigation, distance management, and believable recovery if it becomes stuck. Provide a safe companion mode so it does not interfere with combat or vehicles.
+
+======================================================================
+9. LIVING CITY: PEDESTRIANS, DAILY ROUTINES, AND SOCIAL AI
+======================================================================
+
+This is a core feature, not decoration. Make the city feel inhabited even when the player is doing nothing.
+
+NPC types include:
+- Office workers, shop workers, delivery workers, drivers, tourists, students, families, fitness enthusiasts, beach visitors, wealthy residents, ordinary residents, street vendors, service staff, nightlife visitors, police, paramedics, security, and fictional criminals.
+
+Daily routines:
+MORNING: commuters, coffee buyers, workers arriving, shops opening, school/college movement where appropriate, delivery activity.
+AFTERNOON: busy sidewalks, shopping, lunch, errands, outdoor activities, traffic, deliveries.
+EVENING: restaurants filling, people leaving work, friends meeting, sunset walks, sports, and social activity.
+NIGHT: clubs, night restaurants, nightlife crowds, different traffic mix, security, and changing neighborhood activity.
+
+NPC actions may include:
+- Walking, jogging, stopping, waiting, and crossing streets.
+- Talking face-to-face and using natural gestures.
+- Checking phones, taking photos, and sending messages.
+- Drinking coffee, eating, carrying shopping bags, and entering/exiting stores.
+- Sitting on benches, relaxing at cafés, exercising, dancing, and playing sports.
+- Walking dogs and interacting with companions.
+- Coughing, sneezing, yawning, laughing, sighing, and natural breathing at believable intervals.
+- Reacting to heat, rain, wind, traffic, accidents, loud events, and danger.
+- Helping injured people, calling emergency services, seeking cover, or leaving a threatening situation.
+
+Create fictional personalities such as friendly, shy, nervous, confident, aggressive, suspicious, wealthy, working-class, criminal, tourist, worker, and business owner. Give important NPCs simple memory of significant player interactions where the runtime supports it.
+
+Avoid identical crowds. Vary movement speed, clothing, body type, routes, idle actions, and response timing. Use performance-aware simulation: fully simulate nearby actors and simplified distant populations. Never spawn hundreds of fully simulated NPCs at once in a small browser game.
+
+======================================================================
+10. STREET LIFE AND NATURAL SPATIAL AUDIO
+======================================================================
+
+The city must sound like a normal real street, but slightly restrained and comfortable to listen to. The user explicitly does not want excessively loud, harsh, distorted, or annoying audio.
+
+Use a balanced master mix with separate sliders for ambience, voices, traffic, effects, music, and UI. Default levels should be moderate. Use distance attenuation, spatial positioning, occlusion, indoor/outdoor filtering, and variation. No single ambient sound should dominate the experience.
+
+HUMAN AUDIO:
+- Natural conversations in different fictional voices.
+- Multiple overlapping distant conversations at low volume.
+- People greeting and saying goodbye.
+- Laughter, quiet arguments, and occasional shouts only when contextually justified.
+- Footsteps on concrete, wood, gravel, sand, tile, and gym flooring.
+- Running footsteps and heavier breathing after exertion.
+- Coughing, sneezing, sniffing, throat clearing, yawning, sighing, and ordinary breathing, used sparingly and randomly.
+- Children playing, people talking on phones, vendors speaking, and café conversations.
+
+TRAFFIC AUDIO:
+- Passing cars at varying distances.
+- Engine idle, startup, shutdown, revving, acceleration, and gear changes.
+- Electric motor whine appropriate to fictional EVs.
+- Short and occasional car horns, not continuous honking.
+- Tire noise, braking, turn signals where audible, skids, bumps, and collisions.
+- Doors, windows, locks, alarms, trunks, and seat/vehicle interaction sounds.
+- Motorcycles, scooters, buses, taxis, delivery vehicles, trucks, and emergency sirens.
+
+SHOPS AND RESTAURANTS:
+- Door chimes, doors opening/closing, cash register, card terminal, bags, customers ordering, staff conversations.
+- Coffee machine, cups, plates, utensils, frying and kitchen ambience.
+- Chairs moving, indoor room tone, refrigeration, and air conditioning.
+
+ENVIRONMENT:
+- Wind in trees, birds, ocean waves, distant traffic, rain on pavement, thunder at a realistic distance, water, insects, construction, street cleaning, and ventilation.
+
+PLAYER AND ACTIVITY AUDIO:
+- Clothing movement, footsteps, jump/landing, breathing, phone vibration/ring, food/drink interactions, gym equipment, parachute fabric, helicopter rotor, aircraft, swimming, fighting impacts, and vehicle interiors.
+
+Use original generated or procedurally synthesized sounds. ElevenLabs may be used for original generic voices if connected and licensed, but do not clone celebrities or recognizable real people. If external audio generation is unavailable, create procedural sound cues with Web Audio and/or package original audio assets. Do not require live ElevenLabs API access from the public game.
+
+Avoid sound spam. Use cooldowns, randomized variations, contextual triggers, and a sound budget. A quiet street should remain quiet. A busy intersection may be louder but should remain comfortable.
+
+======================================================================
+11. SMARTPHONE, CALLS, MESSAGES, AND MISSION DELIVERY
+======================================================================
+
+Create an interactive in-game smartphone with:
+- Contacts.
+- Incoming/outgoing calls.
+- Missed calls and call history.
+- Text messages.
+- Mission offers.
+- Photographs.
+- Map coordinates and GPS destinations.
+- Bank and cash overview.
+- Vehicle/property information.
+- Activity invitations.
+- Event notifications.
+- Settings.
+
+A mission may arrive as a phone call. After the call, the player may receive a message containing a fictional target photograph, a fictional identity, background information, location, objective, reward, and optional constraints. The map should show a route or destination marker when the mission is accepted.
+
+Allow the player to accept, decline, ignore, or call back when appropriate. Keep the mission state coherent. Do not activate fake missions that have no real objective or completion condition.
+
+MISSION TYPES:
+- Fictional criminal contracts.
+- Delivery and recovery tasks.
+- Rescue missions.
+- Investigation missions.
+- Vehicle recovery.
+- Infiltration and stealth.
+- Races and challenges.
+- Gang conflicts.
+- Story missions.
+- Social missions and character encounters.
+
+Use fictional targets only. Targets may be fictional wealthy executives, corrupt officials, gang leaders, business rivals, or criminals. Never assign crimes, threats, or assassination contracts to real public figures.
+
+Each mission has an original fictional name, description, required objectives, location, reward, success/failure states, and a real gameplay loop.
+
+======================================================================
+12. CELEBRITIES AND REAL PEOPLE — EXCLUSION RULE
+======================================================================
+
+Do not include real celebrities, politicians, public figures, influencers, actors, athletes, or business personalities as playable characters, NPC likenesses, mission targets, or voice replicas. The user specifically rejected real famous-person likenesses and voices to avoid rights problems.
+
+Instead create original fictional personalities with original names, appearances, voices, biographies, and dialogue. Examples include a fictional billionaire inventor, fictional media host, fictional politician, fictional actor, fictional athlete, fictional gang leader, and fictional business magnate. They must not be recognizable copies or obvious impersonations of real individuals.
+
+Do not use celebrity voice clones, real logos, or fake endorsements.
+
+======================================================================
+13. VEHICLES, OWNERSHIP, THEFT, AND DRIVING
+======================================================================
+
+Build a coherent vehicle system with original fictional vehicles inspired by recognizable modern vehicle categories. The user wants familiar, desirable vehicle variety similar to what players expect from major open-world games. Include fictional vehicles visually differentiated by class, not exact unlicensed copies of protected models.
+
+Vehicle classes:
+- Compact cars.
+- Sedans.
+- Luxury sedans.
+- Sports cars.
+- Supercars.
+- Muscle cars.
+- Electric cars.
+- SUVs.
+- Pickup trucks.
+- Off-road vehicles.
+- Vans.
+- Delivery trucks.
+- Buses.
+- Taxis.
+- Police and emergency vehicles.
+- Motorcycles and scooters.
+- Bicycles.
+- Boats and jet skis.
+- Helicopters.
+- Small aircraft and private jets.
+
+Include modern electric-car features: quiet motor, strong acceleration, battery display, charging stations, charging interaction, regenerative braking approximation, and distinctive interior interface. The user previously mentioned Tesla-like modern EVs; create original fictional EV designs and do not use Tesla branding or badges without permission.
+
+DRIVING:
+- Acceleration, steering, braking, reverse, handbrake, suspension, tire grip, weight transfer, collisions, and damage.
+- First-person cockpit and third-person chase camera.
+- Functional dashboard, speed display, steering animation, lights, indicators, mirrors where practical, and windows/doors.
+- Contextual enter/exit animations, including choosing a suitable door/seat when practical.
+- Correct player seating position and camera transitions.
+- Vehicle audio based on vehicle class and speed.
+- Parking, storage, garages, ownership, keys, locking/unlocking, alarms, repair, customization, and recovery.
+- Theft can trigger alarms, witness reactions, police interest, or ownership consequences as appropriate.
+- Vehicles must not drive through walls, float, or behave as if they have no weight.
+
+======================================================================
+14. MULTI-MODAL TRANSPORT AND AVIATION
+======================================================================
+
+Provide multiple ways to travel around the world.
+
+LAND:
+Cars, motorcycles, scooters, bicycles, buses, taxis, trucks, and walking.
+
+WATER:
+Boats, speedboats, and jet skis, with steering, acceleration, water movement, and boarding/deboarding.
+
+AIR:
+Helicopters, small aircraft, private aircraft, and parachutes.
+
+HELICOPTERS:
+Rotor animation, altitude, pitch, roll, yaw, lift, acceleration, landing, takeoff, door interaction, passenger/driver seating, and a suitable cockpit/chase camera.
+
+AIRCRAFT:
+Takeoff, landing, steering, throttle, altitude, camera, and basic flight physics appropriate to the browser game's scale.
+
+PARACHUTING:
+Jump from an aircraft or high location, freefall, deploy parachute, steer, control descent, and land. The character's body and parachute must animate together. The parachute should not deploy as a static prop while the character continues falling independently.
+
+Implement these systems in a playable, scaled scope. Do not make an aircraft button that only changes the background.
+
+======================================================================
+15. TRAFFIC RULES, TRAFFIC LIGHTS, AND CAMERA FINES
+======================================================================
+
+Create functioning roads with traffic lanes, traffic lights, pedestrian crossings, stop lines, road markings, speed limits, parking areas, and vehicle signals where appropriate.
+
+TRAFFIC AI:
+- Cars follow lanes and roads.
+- Vehicles stop at red lights and proceed at green lights.
+- Traffic responds to obstacles and collisions.
+- Pedestrians cross at appropriate locations.
+- Traffic density varies by time and district.
+- Avoid obviously random driving and repeated identical paths.
+
+TRAFFIC ENFORCEMENT:
+- Some intersections have clearly identifiable enforcement cameras.
+- Some intersections have no camera.
+- Some cameras may be inactive as a world detail if implemented.
+- Crossing a monitored red light or committing a defined detectable violation can create a fine.
+- The fine must be recorded and a notification shown on the phone/HUD.
+- A fine must NOT be issued by an automatic camera at an intersection with no active camera.
+- Police officers may separately observe violations when they have valid line of sight.
+- Keep traffic rules and fine logic consistent and testable.
+
+======================================================================
+16. COMBAT, MELEE, WEAPONS, HEALTH, AND INJURY
+======================================================================
+
+Create responsive melee combat including:
+- Left/right punches.
+- Straight punches.
+- Hooks and uppercuts.
+- Body punches.
+- Kicks and knee strikes.
+- Blocking.
+- Dodging.
+- Counters.
+- Grappling and pushes where practical.
+- Combo chains.
+- Stamina and recovery.
+- Hit reactions, stagger, knockdown, and get-up animations.
+
+Add a fictional weapon system only where it fits the story and platform policy. Include inventory, switching, aiming, reload, ammunition, recoil, impacts, and enemy reactions where supported.
+
+HEALTH AND DAMAGE:
+- Do not make the player die from one ordinary punch or one minor collision.
+- Damage depends on attack strength, repeated hits, fall height, collision severity, and game difficulty.
+- Enemies also have health and believable reactions.
+- Repeated serious damage can lead to incapacitation or death.
+- Use appropriate physics-based falling/ragdoll approximations if supported.
+- Blood and dirt may appear as controlled visual effects after serious fictional injury or vehicle damage.
+- Provide adjustable violence/blood settings, including a reduced-violence mode.
+- Do not create excessive graphic gore. Prioritize believable impact, animation, and readable gameplay.
+
+The combat system must feel fair, responsive, and connected to the player controller. No invisible hits, broken hitboxes, or characters sliding across the ground.
+
+======================================================================
+17. POLICE, WANTED LEVELS, AND EMERGENCY EVENTS
+======================================================================
+
+Create a six-level wanted system:
+0: no active wanted status.
+1: local suspicion/investigation.
+2: active patrol response.
+3: multiple patrol units and pursuit.
+4: stronger tactical response.
+5: specialized response and wider search.
+6: maximum fictional emergency response.
+
+Police behavior:
+- Patrol routes.
+- Observe crimes.
+- Investigate suspicious scenes.
+- React to witnesses and reports.
+- Pursue in vehicles and on foot.
+- Request backup.
+- Search known areas.
+- Lose track of the player if line of sight and evidence are lost.
+- Respond to traffic violations when appropriate.
+- Use roadblocks or helicopter support in larger encounters where feasible.
+
+Police must not magically know the player's exact location without a plausible detection source. Implement wanted decay and hiding/search behavior.
+
+For large battles, use staged waves and performance-aware spawning. Do not spawn hundreds of fully simulated police at once in a browser Artifact.
+
+======================================================================
+18. RESTAURANTS, FOOD, SHOPS, AND OPTIONAL SMOKING
+======================================================================
+
+RESTAURANTS AND CAFÉS:
+- Enter the venue.
+- View a menu.
+- Order food/drinks.
+- Pay with in-game money.
+- Sit at a table.
+- Eat and drink animations.
+- Interact with staff.
+- Hear natural, low-volume indoor ambience.
+- Make food useful for health/stamina when balanced.
+
+Food examples: burgers, pizza, sandwiches, pasta, salads, seafood, breakfast, desserts, coffee, water, and soft drinks. Use original fictional restaurant names and products.
+
+SHOPS:
+- Convenience stores and kiosks.
+- Clothing stores.
+- Supermarkets.
+- Vehicle services.
+- Garages.
+- Gyms and sports shops.
+- Other useful services.
+
+OPTIONAL SMOKING:
+- The player may choose whether to smoke.
+- Fictional cigarettes may be bought at appropriate fictional stores or kiosks.
+- Implement purchase, inventory, lighter, lighting, holding, inhaling, subtle exhaling, disposal, and stop/cancel behavior.
+- NPCs may smoke as an occasional contextual behavior.
+- Do not use real tobacco brands or advertising.
+- Include an option to disable smoking visuals and reduce related content.
+
+======================================================================
+19. FRIENDS, GANG LEADERS, SOCIAL LIFE, AND NIGHTLIFE
+======================================================================
+
+Create original friends, acquaintances, associates, rivals, business owners, informants, and fictional gang leaders.
+
+Allow the player to:
+- Meet friends.
+- Receive invitations.
+- Call contacts.
+- Visit a friend's home.
+- Go to a restaurant or café.
+- Visit a nightclub.
+- Dance.
+- Attend parties.
+- Meet a gang leader.
+- Participate in social and story events.
+- Build or damage relationships through actions.
+
+NPC relationships should have simple state and memory where feasible. Make social interactions purposeful, not just dialogue popups.
+
+NIGHTCLUBS:
+- Crowd simulation at an appropriate density.
+- Dance animations.
+- DJ/music booth or fictional performers.
+- Lighting effects.
+- Bar and seating areas where appropriate.
+- Contextual conversations.
+- Volume controls and a way to lower or mute music.
+
+======================================================================
+20. GYM, FITNESS, AND PHYSICAL PROGRESSION
+======================================================================
+
+Create functional indoor and outdoor gyms, including a beachside gym inspired by the supplied reference images.
+
+Activities may include:
+- Bench press.
+- Dumbbells.
+- Squats.
+- Push-ups.
+- Pull-ups.
+- Treadmill.
+- Stationary bicycle.
+- Stretching.
+- Running.
+- Swimming.
+
+Each activity must have appropriate animation and interaction. Implement gradual stats such as strength, stamina, endurance, and recovery. Physical appearance may change gradually if feasible; do not promise detailed muscle simulation if the browser runtime cannot support it. Training should have meaningful gameplay effects.
+
+======================================================================
+21. BUILDINGS, INTERIORS, AND INTERACTIVE OBJECTS
+======================================================================
+
+Important buildings must have actual accessible interiors where feasible:
+- Player homes and apartments.
+- Restaurants and cafés.
+- Stores.
+- Gyms.
+- Nightclubs.
+- Garages.
+- Offices.
+- Warehouses.
+- Police stations.
+- Hospitals.
+- Hotels.
+- Safehouses.
+
+Create working entry/exit transitions and interiors that match the exterior. Add doors, furniture, counters, seats, beds, elevators, lights, televisions, computers, vending machines, and other context-appropriate interactions.
+
+Do not create fake interactive prompts that do nothing. Every visible interaction must have a meaningful result or be clearly marked as a decorative object.
+
+======================================================================
+22. DAY/NIGHT, WEATHER, WATER, AND ENVIRONMENT
+======================================================================
+
+Implement an adjustable time cycle with morning, midday, afternoon, sunset, evening, and night lighting. Change street activity, NPC schedules, shop behavior, and nightlife over time.
+
+Weather options:
+- Clear/sunny.
+- Partly cloudy.
+- Overcast.
+- Light rain.
+- Heavy rain.
+- Storm/thunder where performance allows.
+- Fog/haze.
+- Wind.
+
+Effects:
+- Wet road materials and reflections.
+- Puddles or water accumulation where practical.
+- Rain particles.
+- Water splashes.
+- Pedestrians reacting to rain.
+- Changed vehicle grip where feasible.
+- Wind effects on vegetation and light objects.
+
+Water:
+- Ocean surface and waves.
+- Beach/shallow water transition.
+- Boats and water vehicles.
+- Water reflections or approximations.
+- Rain interaction.
+
+Environmental interactions:
+- Doors and gates.
+- Breakable glass or selected props where practical.
+- Vehicle collision damage.
+- Selected destructible objects.
+- Explosive or physics events only where they are stable and necessary.
+
+Do not use expensive physics on every object. Prioritize robust interactions and performance.
+
+======================================================================
+23. ECONOMY, PROPERTIES, VEHICLE OWNERSHIP, AND PROGRESSION
+======================================================================
+
+Implement:
+- Cash and bank balance.
+- Mission payments.
+- Contract rewards.
+- Purchases.
+- Food and drinks.
+- Clothing and accessories.
+- Vehicle purchase and ownership.
+- Vehicle repair/customization.
+- Property purchase/rental where feasible.
+- Business income where feasible.
+- Fines and expenses.
+- Reputation and progression.
+
+Keep the economy internally consistent. Deduct money only when a purchase or fine is actually committed. Show transaction confirmation and current balance. Save or export the player state.
+
+======================================================================
+24. STORY AND MISSION CONTENT
+======================================================================
+
+Create an original crime/action story centered on the protagonist's return to San Aurelia and involvement in a changing network of friends, rivals, business interests, fictional gangs, and corrupt fictional institutions.
+
+Aim for approximately 20 interconnected main missions as the long-term content target, plus side missions and ambient events. In the first playable Artifact release, prioritize at least one polished, complete story mission and a functioning repeatable activity loop rather than creating 20 unfinished mission markers.
+
+Mission variety:
+- Vehicle pursuits.
+- Deliveries.
+- Robberies.
+- Heists.
+- Infiltration.
+- Stealth.
+- Fictional criminal contracts.
+- Rescue operations.
+- Investigations.
+- Escort missions.
+- Gang conflicts.
+- Social missions.
+- Races.
+- Vehicle recovery.
+- Escape sequences.
+
+Each mission needs a trigger, clear objective, relevant NPCs, location, dialogue or text, actual gameplay conditions, success/failure handling, reward, and progression. Cinematics should use in-engine animation/camera work where supported, not merely a video unrelated to game state.
+
+======================================================================
+25. USER INTERFACE, PHONE, MAP, AND NAVIGATION
+======================================================================
+
+Create a high-quality interface with a distinct visual identity:
+- Main menu.
+- New game/continue.
+- Character selection/customization.
+- Companion selection.
+- HUD.
+- Health/stamina.
+- Cash/bank display.
+- Weapon/status display where applicable.
+- Wanted level.
+- Mission objective.
+- Interaction prompt.
+- Smartphone.
+- Map and minimap.
+- Pause menu.
+- Settings.
+- Audio controls.
+- Graphics settings.
+- Controls settings.
+- Save export/import.
+
+Create a functional map with player position, major roads, discovered places, mission points, shops, restaurants, gyms, garages, and safe locations. Add a practical GPS/route indicator using the in-game road graph if a full navigation engine is too costly.
+
+======================================================================
+26. DESKTOP, MOBILE, AND INPUT EXPERIENCE
+======================================================================
+
+The same published Artifact should adapt to desktop browsers and supported mobile browsers.
+
+DESKTOP:
+- Keyboard and mouse.
+- WASD movement.
+- Mouse camera look.
+- Shift sprint.
+- Space jump.
+- E interact/enter/exit where appropriate.
+- Contextual vehicle, combat, and menu controls.
+- Remappable controls.
+- Mouse sensitivity and camera sensitivity settings.
+- Optional gamepad support if available.
+
+MOBILE:
+- Responsive full-screen layout.
+- Virtual movement joystick.
+- Touch camera control.
+- Contextual jump, sprint, interact, and vehicle buttons.
+- Separate action buttons for combat and activities.
+- Thumb-safe placement and suitable button sizes.
+- Respect device safe areas and screen aspect ratios.
+- Avoid placing controls over essential gameplay information.
+- Support portrait only for menus if appropriate, but prioritize landscape gameplay.
+- Pause properly when the browser loses focus.
+- Avoid accidental page scrolling, text selection, and browser gestures during gameplay where the Artifact allows it.
+
+Use device detection and responsive rendering. Do not assume mobile devices can run the same polygon count, post-processing, or crowd simulation as a desktop.
+
+======================================================================
+27. SAVE/LOAD, CONTINUITY, AND PLAYER DATA
+======================================================================
+
+Because Artifact storage capabilities may be limited, create a reliable export/import system:
+- Export a player's save data as a JSON file or compact save string when downloads are supported.
+- Import and validate a save file.
+- Version the save format.
+- Handle corrupt or incompatible files gracefully.
+- Keep current-session game state coherent.
+- Test any browser persistence feature before using it.
+- Never claim cloud synchronization or permanent storage unless implemented and verified.
+
+Include the player's avatar, clothing, companion, money, vehicles, mission progress, settings, and other supported progression fields in the save data.
+
+======================================================================
+28. TECHNICAL ARCHITECTURE FOR A CLAUDE ARTIFACT
+======================================================================
+
+The final product must fit the actual Artifact runtime.
+
+Preferred architecture, subject to runtime verification:
+- React for interface and state orchestration.
+- Three.js or React Three Fiber for WebGL 3D rendering when the dependency is available.
+- WebGL shaders/materials for scene quality.
+- Web Audio API for procedural and spatially arranged sound where supported.
+- A modular JavaScript/TypeScript code structure if supported by the Artifact editor.
+- Data-driven configuration for vehicles, NPCs, missions, interactions, and settings.
+
+Create clear modules/components for:
+- Game bootstrap and loading.
+- World and district management.
+- Renderer and camera.
+- Player controller.
+- Character animation state.
+- Vehicle controller.
+- Traffic simulation.
+- NPC simulation.
+- Companion behavior.
+- Interaction system.
+- Combat and damage.
+- Mission system.
+- Smartphone and UI.
+- Audio management.
+- Weather and time.
+- Save export/import.
+- Mobile input.
+- Settings and accessibility.
+
+Use fixed or semi-fixed simulation steps where appropriate, interpolate rendering, clamp frame deltas, and handle browser tab suspension. Prevent runaway loops, unbounded object creation, repeated event-handler registration, and memory leaks.
+
+If the Artifact only accepts a self-contained component or limited package set, adapt the architecture to that real interface rather than inventing unsupported build steps.
+
+======================================================================
+29. QUALITY OF LIFE, ACCESSIBILITY, AND SETTINGS
+======================================================================
+
+Include:
+- Separate master/music/ambience/voice/effects volume.
+- Reduced violence setting.
+- Reduced camera shake.
+- Subtitles and dialogue text.
+- Adjustable text size where practical.
+- Remappable desktop controls.
+- Mobile control layout/sensitivity options.
+- Camera sensitivity.
+- Invert camera option if feasible.
+- Quality presets.
+- Performance mode.
+- Pause/resume.
+- Clear tutorial prompts.
+
+Do not overwhelm the screen with excessive UI. Keep the game cinematic and readable.
+
+======================================================================
+30. DEVELOPMENT PROCESS AND AUTONOMOUS ITERATION
+======================================================================
+
+Use an incremental vertical-slice workflow. Do not create a huge pile of disconnected placeholders.
+
+STAGE A — CAPABILITY DISCOVERY
+Inspect the current Claude Artifact environment, supported code types, available packages, asset capabilities, file access, testing tools, browser preview, and publishing controls. Record only verified facts.
+
+STAGE B — PLAYABLE FOUNDATION
+Create a real-time 3D scene with a player character, controllable movement, camera, collision, ground, lighting, and a small attractive city/coastal district.
+
+STAGE C — CORE INTERACTION
+Add nearby pedestrians, a working vehicle, entering/exiting, driving, interaction prompts, and functioning input on desktop and mobile.
+
+STAGE D — LIVING CITY
+Add traffic, NPC schedules and behaviors, spatial ambience, stores/cafés, day/night, and weather.
+
+STAGE E — ACTIVITIES
+Add phone, mission delivery, restaurants, gym, melee combat, companion, aircraft/parachute, and additional vehicles in priority order.
+
+STAGE F — POLISH
+Improve geometry, materials, animation, camera, sound balance, lighting, interface, responsive layout, and performance.
+
+STAGE G — ACCEPTANCE AND PUBLICATION
+Run the full test suite, verify the game in Artifact preview, fix all critical issues, publish the correct Artifact version if supported, and verify the share link.
+
+At every stage, maintain a working version. Do not replace a functioning build with a broken experimental build. Keep a project changelog and test checklist if the environment supports project files.
+
+======================================================================
+31. CONTINUOUS SELF-REVIEW AND REGRESSION TESTING
+======================================================================
+
+For every asset and feature, follow this loop:
+CREATE → IMPORT/INTEGRATE → INSPECT → TEST → IDENTIFY DEFECTS → FIX/REGENERATE → RETEST.
+
+Review three dimensions:
+1. Technical: Does it work without errors? Are references, inputs, and state valid?
+2. Visual: Does it match the desired realistic art direction? Are there distortions, clipping, low-quality materials, or poor composition?
+3. Gameplay: Does it feel responsive, useful, and coherent with other systems?
+
+MANDATORY TESTS:
+- Game starts and reaches the playable scene.
+- Desktop keyboard movement works.
+- Mouse camera movement works.
+- Mobile joystick works.
+- Mobile camera touch works.
+- Jump, sprint, stop, and turn work.
+- Character never falls through the ground.
+- Camera does not jitter or permanently clip through the player/world.
+- Vehicle entry/exit positions are correct.
+- Vehicle steering, braking, acceleration, and camera work.
+- Passenger/driver seating is coherent.
+- NPC navigation does not constantly get stuck.
+- Companion follows without teleporting repeatedly.
+- Audio volume is moderate and spatially plausible.
+- Phone opens, closes, and displays messages.
+- Mission accepts, starts, progresses, completes, and rewards correctly.
+- Traffic signals change and traffic responds.
+- Fines occur only at active camera intersections.
+- Gym interactions trigger correct animations and stat changes.
+- Parachute deploys and lands correctly if implemented.
+- Helicopter/aircraft controls behave coherently if implemented.
+- Save export/import works.
+- Mobile layout does not hide essential controls.
+- Performance remains usable in supported desktop and mobile environments.
+
+Use code-level tests and browser/Artifact interaction testing where available. Use actual screenshots or video only if the tool is available and necessary; do not invent test evidence. When an available computer-use or browser automation tool can inspect the Artifact, use it to test real interaction. If it is unavailable, rely on the actual preview and code tests, and clearly state what could not be visually verified.
+
+After any significant change, rerun affected tests and a regression smoke test. Never fix one bug by silently disabling a required feature.
+
+======================================================================
+32. HONEST FEATURE STATUS AND SCOPE CONTROL
+======================================================================
+
+Do not mark a feature complete merely because a button, menu item, marker, or placeholder model exists.
+
+A feature is implemented only when it has a working gameplay effect and passes a test.
+
+Use explicit internal statuses:
+- Implemented and tested.
+- Implemented but not fully tested.
+- Prototype/temporary.
+- Not implemented.
+- Blocked by platform limitation.
+
+Prioritize a coherent playable experience over a huge list of superficial features. First make the core city, character, camera, movement, interaction, traffic, one vehicle, one useful NPC loop, audio, and one complete mission work together. Then expand the same architecture with the rest of the systems.
+
+Do not misrepresent a compact Artifact-scale world as the full geographic scale of a commercial AAA game. The ambition can be high, but claims must match the actual build.
+
+======================================================================
+33. FINAL ARTIFACT PUBLICATION AND SHARING
+======================================================================
+
+When the Artifact is stable:
+1. Confirm the latest working version is selected.
+2. Confirm no secrets, local paths, private files, credentials, or personal reference images are exposed.
+3. Confirm core gameplay works without third-party API calls.
+4. Use the actual Claude Publish/Share interface if available.
+5. Publish the game with the public link-sharing setting the user's account permits.
+6. Verify that the link points to the correct version.
+7. Explain whether a visitor can play without signing in and identify any platform-specific restrictions honestly.
+8. Provide the public link only after it has actually been created and verified.
+
+Do not publish the source conversation, user uploads, private workspace, or unrelated files. The requested public release is the RIVORA game Artifact only.
+
+If the current plan/workspace does not support public publishing, do not claim success. Leave the game ready and give one precise instruction for the user to publish it manually.
+
+======================================================================
+34. FINAL ACCEPTANCE EXPERIENCE
+======================================================================
+
+A new player should be able to open the published Artifact and:
+1. See a professional RIVORA title screen.
+2. Start a game.
+3. Learn the controls.
+4. Enter a recognizable, coherent 3D coastal city.
+5. Control a believable protagonist.
+6. Walk, run, jump, and move the camera naturally.
+7. See pedestrians and traffic behaving plausibly.
+8. Hear a natural, moderate street soundscape.
+9. Enter and drive a vehicle.
+10. Interact with at least one shop/café or activity location.
+11. Open and use the in-game phone.
+12. Start and complete at least one real mission or activity.
+13. Experience at least one additional activity such as gym, companion interaction, parachute, or helicopter based on the implemented release scope.
+14. Use the game on a supported mobile browser with touch controls.
+15. Export and restore a save where supported.
+
+The target long-term game includes all systems specified in this document. The first public release must be an honest, polished, playable vertical slice with working interconnected systems and a clearly visible roadmap of remaining content.
+
+======================================================================
+35. FINAL REPORT TO THE USER
+======================================================================
+
+When you finish the current execution session, provide a short, factual report containing:
+- The actual Artifact created.
+- The playable systems implemented.
+- The tests actually run and their outcomes.
+- Desktop/mobile compatibility actually verified.
+- Whether public publishing succeeded.
+- The verified public share link, if created.
+- Remaining incomplete or blocked features.
+- The exact next action required from the user, if any.
+
+Never claim background work will continue after the session unless an actual supported automation has been set up. Never invent completion, test results, tools, or public links.
+
+======================================================================
+36. FINAL COMMAND
+======================================================================
+
+Build RIVORA as a real, interactive, browser-playable 3D open-world game inside Claude Artifacts.
+
+Use Claude Desktop and every genuinely available authorized tool to create files, integrate assets, build the Artifact, operate the available interface, test controls, diagnose failures, and improve the result.
+
+Do not reduce this specification to a static design mockup.
+Do not replace interactive 3D gameplay with screenshots.
+Do not create decorative controls that do nothing.
+Do not claim unavailable integrations are connected.
+Do not request routine approval for harmless project work.
+Do not bypass required security or payment confirmations.
+Do not forget the supplied visual references.
+Do not add real celebrities or recognizable voice/likeness imitations.
+Do not forget the companion system, photo-to-avatar option, natural street audio, vehicle variety, aircraft, parachuting, gym, social life, smartphone missions, traffic-camera fines, combat, police, weather, and cross-device controls.
+
+The user wants to create the project and then play it. Your responsibility is to deliver the best real, verifiable RIVORA Artifact that the available Claude runtime can support.
+
+BUILD IT. TEST IT. FIX IT. PUBLISH IT WHEN AUTHORIZED AND AVAILABLE.
+
+END OF MASTER DIRECTIVE.

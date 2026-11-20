@@ -1,0 +1,134 @@
+RIVORA — CLOUD-FIRST EXECUTION OVERRIDE
+Version: 2.0
+
+READ THIS FILE BEFORE THE MASTER PROMPT. IT OVERRIDES ANY CONFLICTING INSTRUCTION IN THE MASTER PROMPT.
+
+1. THE USER'S NON-NEGOTIABLE CONSTRAINTS
+
+- The user cannot install large software or game engines on the personal computer because local disk space is insufficient.
+- Do not ask the user to install Unreal Engine, Unity, Blender, Node.js, Git, VS Code, a game launcher, or any other large development program locally.
+- Do not build a native Windows, Android, or iOS application as the primary deliverable.
+- The final player-facing game must be an interactive browser-playable Claude Artifact, opened through Claude. The same Artifact should adapt to desktop and supported mobile browsers.
+- The user wants to do as little as possible. Make routine technical choices and perform routine project work independently. Ask the user only for a genuinely blocking human action, such as a login, a one-time GitHub authorization, an unavailable account permission, or personal portrait photos that have not yet been supplied.
+- Do not claim to control the user's physical mouse or computer unless an actual authorized computer-use tool is present and confirms the action. In a cloud session, use cloud shell commands and available browser automation instead of claiming local desktop control.
+
+2. PREFERRED DEVELOPMENT ENVIRONMENT: CLAUDE CODE CLOUD
+
+Prefer Claude Code's cloud sessions at https://claude.ai/code, or the Cloud environment in Claude Desktop, if the user's Claude plan exposes this feature. Cloud sessions run on Anthropic-managed infrastructure and do not require installing the Claude Code CLI, an engine, or a development stack on the user's computer.
+
+Cloud Code currently requires an eligible Claude plan and a GitHub repository connection. Inspect the user's actual available plan and interface before assuming access. If Claude Code Cloud is available:
+
+- Ask the user to connect GitHub once if it is not already connected.
+- Use or create a private GitHub repository named `rivora-game` if the interface and permissions allow it.
+- Treat GitHub only as the remote source-code and asset workspace for Claude Code. Do not publish the playable game on GitHub Pages or move the player experience to a separate website.
+- Clone the repository into the cloud workspace, import this package, and work there.
+- Commit meaningful progress so the work is not lost when a cloud session expires.
+- Use cloud shell, code editing, test runners, and browser automation where available.
+- Keep the user-facing deliverable inside Claude Artifacts.
+
+If Claude Code Cloud is unavailable on the user's plan, do not ask them to install local CLI tools. Fall back to building directly in a Claude Artifact conversation with the strongest code and file capabilities available. Explain only the specific feature unavailable because of the plan.
+
+The cloud VM is not the user's physical computer. It can run code in its isolated environment but must not be described as moving the physical mouse, opening local folders, or installing software on the user's computer.
+
+3. DO WE NEED A FULL GAME ENGINE?
+
+For this delivery target, do NOT install or require Unreal Engine or Unity locally. A traditional native AAA engine is incompatible with the user's no-install, browser-only requirement.
+
+Build a browser-native 3D game using the best runtime that Claude Artifacts actually supports. Prefer Three.js, React Three Fiber, Babylon.js, or another compatible WebGL/WebGPU framework if available and permitted. Treat the selected browser 3D framework as the game's runtime engine. If a dependency cannot be loaded or bundled inside the Artifact, implement the closest self-contained WebGL/Canvas fallback and document the limitation.
+
+First inspect the actual Artifact runtime, supported packages, asset handling, file limits, persistence, browser APIs, and mobile input support. Never assume a library, package manager, network request, filesystem API, or GPU feature is available until verified.
+
+The Artifact must contain the playable game logic and packaged game assets. The game must not require every player to connect OpenArt, ElevenLabs, ChatGPT, or another external account.
+
+4. OPENART MCP — USE THE ALREADY CONNECTED ACCOUNT FIRST
+
+The user says OpenArt AI is already connected to Claude. Check whether it appears as an available remote MCP connector in the current Claude surface/cloud session.
+
+If available:
+- Inspect the available OpenArt tools and the user's remaining credits before generating assets.
+- Use OpenArt for suitable original concept art, protagonist/companion references, environment references, vehicle concepts, textures, storyboard frames, and short cinematic reference material.
+- Use image-to-image or reference-image workflows to keep the visual identity consistent.
+- Use video generation only for visual references or cinematics that are appropriate; never mistake an MP4/video for an interactive 3D character, rig, vehicle, animation system, or playable world.
+- Choose an appropriate model based on quality, consistency, cost, resolution, and licensing.
+- Check the estimated credit cost before large batches. Prefer low-cost previews and selected final renders.
+- Save or export assets into the project only when the MCP tool actually returns a usable file or supported asset reference.
+- Keep a manifest recording each asset's origin, model, license/usage terms, and project location.
+
+If OpenArt is unavailable in the Cloud Code session but is connected as a remote Claude connector, check whether the same Claude account exposes the connector on the current Claude surface. Do not assume a desktop-only local extension is available to a cloud session. Do not ask the user to reconnect unless you verify that it is genuinely missing.
+
+OpenArt generations spend the user's OpenArt credits. MCP availability does not make image/video generations unlimited or automatically free.
+
+5. CHATGPT / OPENAI IMAGE GENERATION
+
+The user wants ChatGPT used for image creation where possible. Do not pretend that Claude can call this ChatGPT conversation or its private image-generation tool unless an explicit supported connector/API is actually available.
+
+Preferred route:
+- Check whether OpenArt exposes a GPT Image model in the connected account.
+- If available, check the exact cost and remaining free/trial credits before using it.
+- Use GPT Image through OpenArt only within free/remaining credits or an already authorized balance.
+- Do not purchase credits, subscribe, or create charges.
+
+If the OpenAI/ChatGPT image tool is not directly available to Claude, state this internally as a tool limitation and use the best available free alternative. Do not make the user manually shuttle every image between services.
+
+6. FREE-FIRST ASSET POLICY AND FALLBACK ORDER
+
+The user strongly prefers free tools and assets. Use this strict priority order:
+
+A. Existing connected OpenArt free/trial credits, if any.
+B. Existing authorized credits already included in the user's account, without topping up or purchasing.
+C. Free image/video/asset models exposed by the connected provider, after verifying their credit cost.
+D. Properly licensed free/public-domain assets from trustworthy sources, with license and attribution recorded where required.
+E. Procedurally generated 3D geometry, materials, SVGs, textures, particles, and environment details created in code.
+F. Browser-native Web Audio synthesis and original generic dialogue placeholders when no suitable free audio asset exists.
+
+If credits run out or a free model is not available, automatically move to the next free alternative. Do not stop development just because one generator has run out of credits. Do not ask the user to pay. Do not silently use paid models or consume paid credits without permission.
+
+ElevenLabs may be used only if the existing connection offers remaining free/authorized credits and the usage terms fit the project. Otherwise create modest, original, non-irritating audio through free licensed assets or Web Audio. All ambient street sounds must be natural and moderate in loudness, never harsh or excessively loud.
+
+7. PERSONAL PHOTOS — THE PLAYER MUST BE THE HERO
+
+The user intends to be the playable protagonist. The current reference images in `Reference_Images/` are game-scene screenshots and are NOT verified photographs of the user. Do not use any of them as the user's face or claim they are personal portraits.
+
+A folder named `Player_Photos/` is included as a placeholder. The user has not yet supplied personal portraits in this package.
+
+When personal photos are uploaded by the user into `Player_Photos/` or attached directly to the Claude session:
+- Treat them as explicit reference material for the user's own avatar.
+- Use them only for the requested player-character creation.
+- Prefer 3–5 clear photos: one straight-on face, one three-quarter view, one side view, and optionally one clear upper-body/full-body view.
+- Use good lighting, no heavy filters, no sunglasses, and no other people in the frame when possible.
+- Create a fictionalized, game-ready 3D avatar that resembles the user as closely as the available tools legitimately permit.
+- Preserve the user's recognizable non-sensitive visual features without inventing personal facts.
+- Do not publish the source portrait in the public Artifact or expose it in the public repository.
+- Do not send the photos to an external generator unless the user has authorized that external processing and the connected service's privacy/retention terms have been checked.
+- If actual 3D reconstruction is unavailable, create the closest avatar using a configurable human base model, face texture/material workflow, hair, clothing, and facial customization.
+- Continue building the game with a temporary original protagonist while awaiting photos; ask for the photos only when the custom likeness step is reached. Do not block unrelated work.
+
+8. PUBLIC CLAUDE ARTIFACT — FINAL PLAYER DELIVERY
+
+The final game must be a self-contained playable Artifact shared through Claude's own interface.
+
+- Keep all runtime game code and usable assets within the Artifact's supported limits.
+- Do not require external API keys or secret credentials at runtime.
+- Do not make every player authenticate with OpenArt or ElevenLabs.
+- Do not embed private user photos or personal data in a publicly shared Artifact.
+- Use Claude's actual Share/Publish controls when the account permits it.
+- Choose `Anyone with the link` when that option exists and the user has the required plan/permissions.
+- Verify the created link and the visitor experience before reporting success.
+- If the account is Free or the workspace restricts external sharing, explain the exact sharing limitation and leave the Artifact ready; do not pretend public access was enabled.
+- Remember that Artifact sharing options differ by plan, and some Artifacts that connect to external websites or contain files under review cannot be shared outside the organization.
+
+9. NO UNNECESSARY QUESTIONS
+
+Do not ask the user for preferences that can reasonably be inferred from this specification. Make routine technical decisions yourself. Do not ask about RAM, GPU, local engine installation, code editor, or terminal configuration because the preferred approach is cloud-first and browser-playable.
+
+Ask the user only for a genuine blocker, such as:
+- the one-time GitHub connection/repository selection required by Claude Code Cloud;
+- a required account login or explicit permission that the platform itself will not grant automatically;
+- personal photos needed to make the protagonist resemble the user;
+- an actual plan or sharing restriction that cannot be changed by available controls.
+
+When asking, ask only for the single missing action. Continue all unrelated work.
+
+10. FINAL EXECUTION COMMAND
+
+Inspect the current Claude plan, Claude Code Cloud availability, GitHub connection, OpenArt remote MCP connector, available free credits, Artifact runtime, and available testing tools. Then begin building RIVORA in the cloud. Use the complete master prompt as the feature specification and this override as the authoritative execution and tool policy. Do not send the user back to install large software. Do not stop at a plan. Build, run, test, fix, improve, and prepare the playable Claude Artifact for public link sharing.

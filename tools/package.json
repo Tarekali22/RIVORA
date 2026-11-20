@@ -1,0 +1,15 @@
+{
+  "name": "rivora-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build tooling for the RIVORA single-file artifact",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node ../tests/smoke.mjs && node ../tests/gameplay.mjs && node ../tests/mobile.mjs"
+  },
+  "dependencies": {
+    "esbuild": "0.24.0",
+    "three": "0.158.0"
+  }
+}

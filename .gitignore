@@ -1,0 +1,8 @@
+tools/node_modules/
+node_modules/
+Player_Photos/
+*.private.*
+test-results/
+tests/screens/
+tests/*.log
+tests/debug*.mjs
