@@ -60,6 +60,12 @@ class Game {
     let renderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: !this.touch, powerPreference: 'high-performance', preserveDrawingBuffer: false }); }
     catch (e) { msg.textContent = 'WebGL is not available on this device/browser, so RIVORA cannot run here.'; throw e; }
+    renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.paused = true; let saved = false; try { saved = this.running && this.save.write(); } catch (er) {}
+      const ar = isAR(), d = document.createElement('div'); d.id = 'ctxlost'; d.style.cssText = 'position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(6,10,14,.92);color:#fff;font:600 17px system-ui;text-align:center;padding:24px';
+      d.innerHTML = '<div><div style="font-size:24px;font-weight:800;margin-bottom:10px"></div><div class="t" style="max-width:520px;opacity:.85;margin-bottom:18px"></div><button class="btn primary" style="font-size:18px;padding:12px 24px"></button></div>';
+      d.querySelector('div div').textContent = ar ? 'كارت الشاشة توقف مؤقتًا' : 'The graphics card paused the game';
+      d.querySelector('.t').textContent = (ar ? 'المتصفح أوقف الرسوم بسبب ضغط على الذاكرة. ' : 'The browser stopped the graphics because memory ran low. ') + (saved ? (ar ? 'تم حفظ تقدّمك. اضغط الزر ثم «متابعة».' : 'Your progress was saved. Press the button, then Continue.') : '');
+      const b = d.querySelector('button'); b.textContent = ar ? 'إعادة تشغيل اللعبة' : 'Restart the game'; b.onclick = () => location.reload(); document.body.appendChild(d); }, false);
     this.renderer = renderer; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.shadowMap.enabled = this.quality.shadows && this.settings.shadows; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     view.appendChild(renderer.domElement); renderer.domElement.tabIndex = 0;

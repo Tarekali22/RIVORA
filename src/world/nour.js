@@ -34,16 +34,17 @@ const SHOPS = [
 
 // ---------------- sign atlas: every Arabic sign in one texture, one draw call ----------------
 class SignAtlas {
-  constructor() { this.c = makeCanvas(2048, 2048); this.g = this.c.getContext('2d'); this.i = 0; this.cw = 512; this.ch = 128; this.geo = { pos: [], nor: [], uv: [] }; }
+  constructor() { this.c = makeCanvas(1024, 1024); this.g = this.c.getContext('2d'); this.i = 0; this.cw = 256; this.ch = 64; this.geo = { pos: [], nor: [], uv: [] }; }
   cell(ar, en, bg, fg) {
     const key = ar + '|' + en; this.cache = this.cache || {}; if (this.cache[key]) return this.cache[key];
-    const k = this.i++; if (k >= 64) return null; const cx = (k % 4) * this.cw, cy = Math.floor(k / 4) * this.ch, g = this.g;
-    g.fillStyle = bg; g.fillRect(cx, cy, this.cw, this.ch);
-    g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 6; g.strokeRect(cx + 3, cy + 3, this.cw - 6, this.ch - 6);
+    const k = this.i++; if (k >= 64) return null; const cx = (k % 4) * this.cw, cy = Math.floor(k / 4) * this.ch, g = this.g; g.save(); g.translate(cx, cy); g.scale(0.5, 0.5); const W0 = 512, H0 = 128;
+    g.fillStyle = bg; g.fillRect(0, 0, W0, H0);
+    g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 6; g.strokeRect(3, 3, W0 - 6, H0 - 6);
     g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl';
-    g.font = `700 ${en ? 56 : 70}px Cairo, "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif`; g.fillText(ar, cx + this.cw / 2, cy + (en ? 50 : 66), this.cw - 30);
-    if (en) { g.direction = 'ltr'; g.font = '700 26px "Segoe UI", Arial, sans-serif'; g.fillText(en, cx + this.cw / 2, cy + 104, this.cw - 40); }
-    return (this.cache[key] = [cx / 2048, 1 - (cy + this.ch) / 2048, (cx + this.cw) / 2048, 1 - cy / 2048]);
+    g.font = `700 ${en ? 56 : 70}px Cairo, "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif`; g.fillText(ar, W0 / 2, en ? 50 : 66, W0 - 30);
+    if (en) { g.direction = 'ltr'; g.font = '700 26px "Segoe UI", Arial, sans-serif'; g.fillText(en, W0 / 2, 104, W0 - 40); }
+    g.restore();
+    return (this.cache[key] = [cx / 1024, 1 - (cy + this.ch) / 1024, (cx + this.cw) / 1024, 1 - cy / 1024]);
   }
   // vertical quad facing (nx, nz), centred at (x, y, z)
   quad(uv, x, y, z, nx, nz, w, h) {
@@ -53,7 +54,7 @@ class SignAtlas {
   }
   mesh() {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(this.geo.pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(this.geo.nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(this.geo.uv, 2));
-    const t = new THREE.CanvasTexture(this.c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    const t = new THREE.CanvasTexture(this.c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
     const m = new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.1, roughness: 0.55, polygonOffset: true, polygonOffsetFactor: -2 });
     const mesh = new THREE.Mesh(g, m); mesh.name = 'nour_signs'; return mesh;
   }

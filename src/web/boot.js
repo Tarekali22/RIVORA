@@ -34,5 +34,5 @@ try { if (q.get('classic') !== '1') await loadReal(); }
 catch (e) { console.warn('[RIVORA] realistic assets unavailable, using procedural art', e); window.RIVORA_REAL = null; }
 const s = document.createElement('script'); s.charset = 'utf-8'; s.src = './game.js'; document.body.appendChild(s);
 // more licensed people stream in after the game is running (more variety without a longer first load)
-const EXTRA = touch ? ['arjun', 'mia'] : ['arjun', 'daniel', 'leo', 'mia', 'noah', 'olivia'];
+const lowMem = (navigator.deviceMemory || 8) <= 4; const EXTRA = touch || lowMem ? [] : ['arjun', 'mia', 'noah'];
 s.onload = () => { if (!window.RIVORA_REAL) return; setTimeout(async () => { for (const n of EXTRA) { try { window.RIVORA_REAL.chars[n] = await glb('c_' + n); } catch (e) { console.warn('[RIVORA] extra character', n, e); } await new Promise((r) => setTimeout(r, 1500)); } }, q.get('extra') === '0' ? 1e9 : 6000); };

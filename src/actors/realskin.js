@@ -68,8 +68,15 @@ function template(name, hi) {
 const MATC = {};
 function lum(hex) { const c = new THREE.Color(hex); return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; }
 const HUE = [null, 'hue-rotate(150deg) saturate(1.2)', 'hue-rotate(220deg) saturate(1.3)', 'hue-rotate(95deg)', 'grayscale(1) brightness(.45) contrast(1.2)', 'hue-rotate(290deg) saturate(1.4)', 'sepia(1) saturate(2.2) hue-rotate(-12deg)'];
+// a fixed clothing palette keeps the number of recoloured textures small (random #rrggbb outfits used to create a new
+// 512 px texture for every passer-by, which slowly filled GPU memory until the browser tab crashed)
+const PAL = ['#1d1f24', '#3a3f47', '#7d838c', '#d9d6cf', '#f4f1ea', '#6b1e24', '#b23a3a', '#d9822b', '#e5c34b', '#2f5d3a', '#5d8a4e', '#1f3b63', '#3f74b5', '#6a4c93', '#7a5230', '#c9a27e'];
+const palHex = (hex) => { const c = new THREE.Color(hex); let best = PAL[0], bd = 9; for (const p of PAL) { const q = new THREE.Color(p), d = (q.r - c.r) ** 2 + (q.g - c.g) ** 2 + (q.b - c.b) ** 2; if (d < bd) { bd = d; best = p; } } return best; };
+const MATC_ORDER = [], MATC_MAX = 72;
 function tinted(model, m0, key) {
+  if (/^#[0-9a-f]{6}$/i.test(key)) key = palHex(key);
   const k = m0.uuid + '|' + key; if (MATC[k]) return MATC[k];
+  if (key !== 'orig') { MATC_ORDER.push(k); if (MATC_ORDER.length > MATC_MAX) { const old = MATC_ORDER.shift(), om = MATC[old]; delete MATC[old]; if (om && om.map) om.map.dispose(); } }
   const img = m0.map && m0.map.image; if (!img || key === 'orig') return (MATC[k] = m0);
   const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d');
   if (key.startsWith('v')) { g.filter = HUE[+key.slice(1)] || 'none'; g.drawImage(img, 0, 0); }
@@ -189,5 +196,5 @@ export class RealSkin {
     const tx = T.hipRef.x + hp.x / T.k, ty = T.hipRef.y + (hp.y - 0.98) / T.k, tz = T.hipRef.z + hp.z / T.k;
     if (w >= 1) H.position.set(tx, ty, tz); else { H.position.x += (tx - H.position.x) * w; H.position.y += (ty - H.position.y) * w; H.position.z += (tz - H.position.z) * w; }
   }
-  dispose() { if (this.root.parent) this.root.parent.remove(this.root); this.mixer.stopAllAction(); }
+  dispose() { if (this.root.parent) this.root.parent.remove(this.root); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.root.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) o.skeleton.dispose(); }); }
 }

@@ -292,7 +292,12 @@ export class Vehicle {
     if (this.health < 30 && this.game.fx && R() < dt * (this.disabled ? 10 : 4)) this.game.fx.smoke(this.local(0, this.L / 2 - 0.6), this.pos.y + this.H * 0.7, this.disabled ? 1 : 0.5);
   }
   setColor(c) { this.color = c; this.m.paint.color.set(c); }
-  dispose() { this.game.scene.remove(this.object); this.object.traverse((o) => { if (o.isMesh && o.material === this.m.paint) { } }); this.m.paint.dispose(); }
+  dispose() { // free this car's GPU geometry and textures unless another live vehicle still uses them (stops a slow memory leak as traffic despawns)
+    this.game.scene.remove(this.object); this.m.paint.dispose();
+    const mats = (o) => (o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []), keep = new Set();
+    for (const v of this.game.vehicles.list) if (v !== this && v.object) v.object.traverse((o) => { if (o.geometry) keep.add(o.geometry); for (const m of mats(o)) for (const k in m) if (m[k] && m[k].isTexture) keep.add(m[k]); });
+    this.object.traverse((o) => { if (o.geometry && !keep.has(o.geometry) && !o.geometry.userData.shared) o.geometry.dispose(); for (const m of mats(o)) for (const k in m) { const t = m[k]; if (t && t.isTexture && !keep.has(t) && !t.userData.shared) t.dispose(); } });
+  }
   serialize() { return { key: this.key, color: this.color, health: this.health, battery: this.battery, pos: [this.pos.x, this.pos.y, this.pos.z], heading: this.heading }; }
 }
 

@@ -26,7 +26,7 @@ function crack(g, r, x, y, len, wdt) { g.beginPath(); g.moveTo(x, y); let a = r(
 // Asphalt: albedo (aggregate + repairs + oil), roughness (patches and ruts are smoother → read as wet when it rains), normal (cracks, aggregate)
 export function asphaltHD(seed = 3, size = 512) {
   const r = rng(seed), W = size, H = size;
-  const c = makeCanvas(W, H), g = c.getContext('2d'), hc = makeCanvas(W, H), hg = hc.getContext('2d'), rc = makeCanvas(W, H), rg = rc.getContext('2d');
+  const c = makeCanvas(W, H), g = c.getContext('2d'), hc = makeCanvas(W, H), hg = hc.getContext('2d', { willReadFrequently: true }), rc = makeCanvas(W, H), rg = rc.getContext('2d');
   g.fillStyle = '#3a3c3f'; g.fillRect(0, 0, W, H); hg.fillStyle = '#808080'; hg.fillRect(0, 0, W, H); rg.fillStyle = '#e0e0e0'; rg.fillRect(0, 0, W, H);
   // aggregate
   for (let i = 0; i < W * H / 9; i++) { const x = r() * W, y = r() * H, v = r(); g.fillStyle = v < 0.5 ? 'rgba(20,20,22,.35)' : v < 0.85 ? 'rgba(95,96,98,.32)' : 'rgba(150,148,140,.35)'; g.fillRect(x, y, 1.4, 1.4); hg.fillStyle = v < 0.5 ? 'rgba(60,60,60,.5)' : 'rgba(200,200,200,.45)'; hg.fillRect(x, y, 1.4, 1.4); }
@@ -46,7 +46,7 @@ export function asphaltHD(seed = 3, size = 512) {
 // Concrete sidewalk tiles 50 cm with grooves, chips and stains
 export function sidewalkHD(seed = 5, size = 512, tiles = 8, base = '#bdb8ae') {
   const r = rng(seed), W = size, H = size, ts = W / tiles;
-  const c = makeCanvas(W, H), g = c.getContext('2d'), hc = makeCanvas(W, H), hg = hc.getContext('2d'), rc = makeCanvas(W, H), rg = rc.getContext('2d');
+  const c = makeCanvas(W, H), g = c.getContext('2d'), hc = makeCanvas(W, H), hg = hc.getContext('2d', { willReadFrequently: true }), rc = makeCanvas(W, H), rg = rc.getContext('2d');
   rg.fillStyle = '#d8d8d8'; rg.fillRect(0, 0, W, H);
   for (let ty = 0; ty < tiles; ty++) for (let tx = 0; tx < tiles; tx++) {
     const v = (r() - 0.5) * 18; const col = shade(base, v); g.fillStyle = col; g.fillRect(tx * ts, ty * ts, ts, ts);
@@ -65,7 +65,7 @@ export function shade(hex, v) { const n = parseInt(hex.slice(1), 16); const f = 
 // Returns albedo, night-light emissive, normal and roughness maps.
 export function plasterFacade(seed = 11) {
   const r = rng(seed), W = 512, H = 448, bayW = W / 2, flH = H / 2;
-  const c = makeCanvas(W, H), g = c.getContext('2d'), e = makeCanvas(W, H), ge = e.getContext('2d'), hc = makeCanvas(W, H), hg = hc.getContext('2d'), rc = makeCanvas(W, H), rg = rc.getContext('2d');
+  const c = makeCanvas(W, H), g = c.getContext('2d'), e = makeCanvas(W, H), ge = e.getContext('2d'), hc = makeCanvas(W, H), hg = hc.getContext('2d', { willReadFrequently: true }), rc = makeCanvas(W, H), rg = rc.getContext('2d');
   g.fillStyle = '#d9cfbd'; g.fillRect(0, 0, W, H); ge.fillStyle = '#000'; ge.fillRect(0, 0, W, H); hg.fillStyle = '#808080'; hg.fillRect(0, 0, W, H); rg.fillStyle = '#e8e8e8'; rg.fillRect(0, 0, W, H);
   // plaster grain and blotches
   for (let i = 0; i < W * H / 14; i++) { const x = r() * W, y = r() * H, v = r(); g.fillStyle = v < 0.5 ? 'rgba(120,105,85,.10)' : 'rgba(255,255,250,.10)'; g.fillRect(x, y, 2, 2); hg.fillStyle = v < 0.5 ? 'rgba(90,90,90,.25)' : 'rgba(170,170,170,.25)'; hg.fillRect(x, y, 2, 2); }
@@ -102,7 +102,7 @@ export function plasterFacade(seed = 11) {
 // Generic facade detail: add a normal + roughness map to an existing facade albedo (window rectangles detected by darkness)
 export function detailFromAlbedo(tex, strength = 1.6) {
   const img = tex.image; if (!img || !img.width) return null;
-  const W = img.width, H = img.height, hc = makeCanvas(W, H), hg = hc.getContext('2d'); hg.drawImage(img, 0, 0);
+  const sc = Math.min(1, 512 / Math.max(img.width, img.height)), W = Math.round(img.width * sc), H = Math.round(img.height * sc), hc = makeCanvas(W, H), hg = hc.getContext('2d', { willReadFrequently: true }); hg.drawImage(img, 0, 0, W, H);
   const id = hg.getImageData(0, 0, W, H), d = id.data, rc = makeCanvas(W, H), rgx = rc.getContext('2d'), rd = rgx.createImageData(W, H);
   for (let i = 0; i < d.length; i += 4) { const l = (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11); const dark = l < 90; const v = dark ? 40 : 110 + l * 0.35; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; const rv = dark ? 25 : 215; rd.data[i] = rd.data[i + 1] = rd.data[i + 2] = rv; rd.data[i + 3] = 255; }
   hg.putImageData(id, 0, 0); rgx.putImageData(rd, 0, 0);
@@ -123,7 +123,7 @@ export function addWind(mat, U, base = 1.5, height = 6, amp = 0.35) {
 }
 // Apply PBR detail to the city's shared materials (keeps their albedo where it carries road markings)
 export function upgradeCityMaterials(city, quality) {
-  const M = city.M, hi = (quality && quality.level >= 2), size = hi ? 1024 : 512;
+  const M = city.M, hi = (quality && quality.level >= 3), size = hi ? 1024 : 512; // 1024 px maps only on Ultra (memory)
   try {
     const asp = asphaltHD(7, size);
     for (const m of [M.road, M.asphalt]) { m.normalMap = asp.normal; m.normalScale = new THREE.Vector2(0.85, 0.85); m.roughnessMap = asp.rough; m.roughness = 0.95; m.needsUpdate = true; }
