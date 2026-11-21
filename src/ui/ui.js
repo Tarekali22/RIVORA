@@ -1,5 +1,6 @@
 // HUD, minimap, world map with GPS, notifications, panels and touch controls.
 import * as L from '../world/layout.js';
+import { T } from '../core/i18n.js';
 import { clamp, fmtMoney, fmtTime, lerp, isTouch, dist } from '../core/util.js';
 
 const $ = (s) => document.querySelector(s);
@@ -8,6 +9,7 @@ const DCOL = { downtown: '#3a4550', boardwalk: '#5a5146', hillside: '#3d4a33', r
 
 export class UI {
   constructor(game) {
+    window.addEventListener('keydown', (e) => { if (e.code === 'Escape' && !this.game.running && this.panelStack.length) { e.preventDefault(); this.close(); } });
     this.game = game; this.layer = $('#layer'); this.toastEl = $('#toasts'); this.subT = 0; this.hintT = 0; this.blockingUI = false;
     this.wantedEl = $('#wanted'); this.wantedEl.innerHTML = '<i></i>'.repeat(6);
     this.mm = $('#mmc'); this.mmx = this.mm.getContext('2d');
@@ -32,14 +34,17 @@ export class UI {
   showHUD(on) { $('#hud').classList.toggle('hidden', !on); $('#touch').classList.toggle('hidden', !on || !this.touch); document.body.classList.toggle('playing', on); }
   // ---------------- generic panels ----------------
   panel(html, opts = {}) {
-    const ov = document.createElement('div'); ov.className = 'overlay'; ov.innerHTML = `<div class="panel" role="dialog">${html}</div>`;
+    const ov = document.createElement('div'); ov.className = 'overlay'; ov.innerHTML = `<div class="panel" role="dialog">${opts.dismiss === false ? '' : '<button class="xclose" aria-label="Close" title="Close (Esc)">✕</button>'}${html}</div>`;
     if (opts.wide) ov.querySelector('.panel').style.width = 'min(980px, 100%)';
-    this.layer.appendChild(ov); this.panelStack.push(ov); this.blockingUI = true; this.game.input.releaseLock();
+    // only the newest panel is shown; older ones are hidden until it closes (no stacked panels)
+    const prev = this.panelStack[this.panelStack.length - 1]; if (prev) prev.style.display = 'none';
+    this.layer.appendChild(ov); this.panelStack.push(ov); this.blockingUI = true; this.game.input.releaseLock(); document.body.classList.add('panel-open');
+    const xb = ov.querySelector('.xclose'); if (xb) xb.onclick = (e) => { e.stopPropagation(); this.close(ov); };
     ov.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) this.game.audio.ui('click'); if (e.target === ov && opts.dismiss !== false) this.close(ov); });
     if (opts.onClose) ov._onClose = opts.onClose;
     return ov;
   }
-  close(ov) { ov = ov || this.panelStack[this.panelStack.length - 1]; if (!ov) return; ov.remove(); this.panelStack = this.panelStack.filter((p) => p !== ov); if (ov._onClose) ov._onClose(); this.blockingUI = this.panelStack.length > 0 || this.mapOpen || (this.game.phone && this.game.phone.open && this.game.phone.blocking); }
+  close(ov) { ov = ov || this.panelStack[this.panelStack.length - 1]; if (!ov) return; ov.remove(); this.panelStack = this.panelStack.filter((p) => p !== ov); const top = this.panelStack[this.panelStack.length - 1]; if (top) top.style.display = ''; else document.body.classList.remove('panel-open'); if (ov._onClose) ov._onClose(); this.blockingUI = this.panelStack.length > 0 || this.mapOpen || (this.game.phone && this.game.phone.open && this.game.phone.blocking); }
   closeAll() { while (this.panelStack.length) this.close(); }
   confirm(title, text, yes = 'Confirm', no = 'Cancel') {
     return new Promise((res) => {
@@ -86,7 +91,7 @@ export class UI {
     if (P.state === 'vehicle' && P.vehicle) {
       vEl.classList.remove('hidden'); const v = P.vehicle;
       const air = v.type === 'heli' || v.type === 'plane'; const kmh = Math.round(Math.abs(air ? Math.hypot(v.vel.x, v.vel.z) : v.speed) * 3.6);
-      vEl.querySelector('.spd').textContent = kmh; vEl.querySelector('.unit').textContent = air ? `KM/H · ALT ${Math.round(v.pos.y - Math.max(0, G.city.surfaceHeight(v.pos.x, v.pos.z, v.pos.y)))} M` : 'KM/H';
+      vEl.querySelector('.spd').textContent = kmh; vEl.querySelector('.unit').textContent = air ? `KM/H · ALT ${Math.round(v.pos.y - Math.max(0, G.city.surfaceHeight(v.pos.x, v.pos.z, v.pos.y)))} M` : (v.gear != null && v.type === 'car' ? `KM/H · ${v.gear === 'R' ? 'R' : 'G' + v.gear}` : 'KM/H');
       let bars = `<div>DMG<div class="bar"><i style="width:${v.health}%;background:${v.health < 30 ? '#ff4d5e' : '#a3e635'}"></i></div></div>`;
       if (v.battery != null) bars += `<div>BATTERY ${Math.round(v.battery)}%<div class="bar"><i style="width:${v.battery}%"></i></div></div>`;
       if (v.type === 'plane') bars += `<div>THROTTLE<div class="bar"><i style="width:${Math.round(v.throttleP * 100)}%"></i></div></div>`;
@@ -148,7 +153,7 @@ export class UI {
     g.save(); g.clearRect(0, 0, Wd, H); g.beginPath(); g.arc(Wd / 2, H / 2, Wd / 2, 0, 7); g.clip();
     g.fillStyle = '#0f2b38'; g.fillRect(0, 0, Wd, H);
     g.translate(Wd / 2, H / 2); g.rotate(rot - Math.PI); g.scale(zoom / this.S, zoom / this.S);
-    if (G.interior) { g.restore(); g.save(); g.fillStyle = '#1b2228'; g.fillRect(0, 0, Wd, H); g.fillStyle = '#9aa'; g.font = '600 22px Figtree, sans-serif'; g.textAlign = 'center'; g.fillText('INDOORS', Wd / 2, H / 2); g.restore(); return; }
+    if (G.interior) { g.restore(); g.save(); g.fillStyle = '#1b2228'; g.fillRect(0, 0, Wd, H); g.fillStyle = '#9aa'; g.font = '600 22px Figtree, sans-serif'; g.textAlign = 'center'; g.fillText(T('INDOORS'), Wd / 2, H / 2); g.restore(); return; }
     g.drawImage(this.base, -this.wx(P.pos.x), -this.wz(P.pos.z));
     // route
     const X = (x) => this.wx(x) - this.wx(P.pos.x), Z = (z) => this.wz(z) - this.wz(P.pos.z);
@@ -201,11 +206,11 @@ export class UI {
     const X = (x) => w / 2 - (x - this.mv.cx) * k, Z = (z) => h / 2 - (z - this.mv.cz) * k;
     if (this.route.length) { g.strokeStyle = '#ffb35c'; g.lineWidth = 4; g.beginPath(); const P = this.game.player.pos; g.moveTo(X(P.x), Z(P.z)); for (const n of this.route) g.lineTo(X(n.x), Z(n.z)); const t = this.navTarget(); if (t) g.lineTo(X(t.x), Z(t.z)); g.stroke(); }
     g.font = '600 12px Figtree, sans-serif'; g.textAlign = 'left';
-    for (const m of this._markers()) { g.fillStyle = m.c; g.beginPath(); g.arc(X(m.x), Z(m.z), m.ring ? 7 : m.r + 1, 0, 7); g.fill(); if (m.ring) { g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); } if (m.label && this.mv.zoom > 0.9) { g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(m.label, X(m.x) + 8, Z(m.z) + 4); } }
+    for (const m of this._markers()) { g.fillStyle = m.c; g.beginPath(); g.arc(X(m.x), Z(m.z), m.ring ? 7 : m.r + 1, 0, 7); g.fill(); if (m.ring) { g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); } if (m.label && this.mv.zoom > 0.9) { g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(T(m.label), X(m.x) + 8, Z(m.z) + 4); } }
     const P = this.game.player; g.save(); g.translate(X(P.pos.x), Z(P.pos.z)); g.rotate(-P.heading); g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -10); g.lineTo(7, 8); g.lineTo(0, 4); g.lineTo(-7, 8); g.closePath(); g.stroke(); g.fill(); g.restore();
     // district labels
     g.font = '800 16px "Big Shoulders Display", sans-serif'; g.fillStyle = 'rgba(255,255,255,.55)'; g.textAlign = 'center';
-    for (const [n, x, z] of [['DOWNTOWN', 60, -120], ['CORAL BOARDWALK', 520, -300], ['VISTA HEIGHTS', -780, -60], ['LAUREL PARK', -150, 330], ['MERCADO', -360, -120], ['FOUNDRY PORT', -150, -560], ['AIRPORT', 0, 700], ['NEON ROW', 270, 170], ['BAYSIDE MARINA', 470, -700], ['PACIFIC', 760, 200]]) g.fillText(n, X(x), Z(z));
+    for (const [n, x, z] of [['DOWNTOWN', 60, -120], ['CORAL BOARDWALK', 520, -300], ['VISTA HEIGHTS', -780, -60], ['LAUREL PARK', -150, 330], ['MERCADO', -360, -120], ['FOUNDRY PORT', -150, -560], ['AIRPORT', 0, 700], ['NEON ROW', 270, 170], ['BAYSIDE MARINA', 470, -700], ['PACIFIC', 760, 200], ['EL NOUR QUARTER', -360, 240]]) g.fillText(T(n), X(x), Z(z));
   }
   // ---------------- touch controls ----------------
   setupTouch() {
@@ -230,8 +235,10 @@ export class UI {
     else if (P.state === 'freefall' || P.state === 'parachute') ctx = 'air';
     else if (P.state === 'swim') ctx = 'swim';
     else if (P.state === 'activity' || P.state === 'sit') ctx = 'act';
+    else if (P.state === 'foot' && P.gunReady) ctx = 'gun'; // a drawn gun: hold FIRE (aim / reload / switch are the round buttons beside it)
     if (ctx === this._ctx) return; this._ctx = ctx;
     const S = { foot: [['punch', 'PUNCH'], ['kick', 'KICK'], ['jump', 'JUMP'], ['block', 'BLOCK', 1], ['interact', 'USE'], ['sprint', 'RUN', 1], ['dodge', 'DODGE'], ['vehicle', 'ENTER'], ['crouch', 'CROUCH', 1]],
+      gun: [['punch', 'FIRE', 1], ['jump', 'JUMP'], ['interact', 'USE'], ['sprint', 'RUN', 1], ['dodge', 'DODGE'], ['vehicle', 'ENTER'], ['crouch', 'CROUCH', 1]],
       car: [['jump', 'BRAKE', 1], ['horn', 'HORN'], ['vehicle', 'EXIT'], ['lights', 'LIGHTS'], ['radio', 'RADIO'], ['camera', 'VIEW']], bike: [['jump', 'BRAKE', 1], ['horn', 'HORN'], ['vehicle', 'EXIT'], ['camera', 'VIEW']], boat: [['vehicle', 'EXIT'], ['horn', 'HORN'], ['camera', 'VIEW']],
       heli: [['jump', 'UP', 1], ['crouch', 'DOWN', 1], ['vehicle', 'EXIT'], ['camera', 'VIEW']], plane: [['sprint', 'THR +', 1], ['crouch', 'THR −', 1], ['vehicle', 'EXIT'], ['camera', 'VIEW']],
       air: [['jump', 'CHUTE']], swim: [['sprint', 'FAST', 1], ['jump', 'CLIMB']], act: [['interact', 'STOP'], ['jump', 'REP'], ['punch', 'REP']] }[ctx];

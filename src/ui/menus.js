@@ -1,5 +1,6 @@
 // Title screen, character creator, companion select, pause/settings, save/load, store/service menus.
 import { SKIN_TONES, HAIR_COLORS, EYE_COLORS, HAIR_STYLES, FACIAL, TOPS, BOTTOMS, OUTFITS, HERO_DEFAULT, randomAppearance } from '../actors/humanoid.js';
+import { setLang, isAR } from '../core/i18n.js';
 import { VEHICLES, DEALER_STOCK } from '../data/vehicles.js';
 import { Input, ACTION_LABELS } from '../core/input.js';
 import { fmtMoney, rgbToHex, R, bus, clamp } from '../core/util.js';
@@ -20,7 +21,8 @@ export class Menus {
       <button class="btn" data-a="load">Load a save code</button>
       <button class="btn" data-a="settings">Settings</button>
       <button class="btn" data-a="controls">Controls</button>
-      <button class="btn" data-a="about">About & credits</button></div>
+      <button class="btn" data-a="about">About & credits</button>
+      <button class="btn" data-a="lang" data-noi18n>العربية / English</button></div>
       <div class="foot">An original open-world game set in the fictional coastal city of San Aurelia. All characters, brands and places are invented. Built entirely from procedural 3D and synthesized audio.</div>`;
     document.getElementById('layer').appendChild(el); this.titleEl = el;
     el.addEventListener('click', async (e) => {
@@ -30,6 +32,7 @@ export class Menus {
       if (a === 'new') { el.remove(); this.creator(); }
       if (a === 'load') this.saveMenu(true);
       if (a === 'settings') this.settings(); if (a === 'controls') this.controls(); if (a === 'about') this.about();
+      if (a === 'lang') { G.settings.lang = isAR() ? 'en' : 'ar'; setLang(G.settings.lang); G.saveSettings(); }
     });
   }
   // ---------------- character creator ----------------
@@ -118,6 +121,10 @@ export class Menus {
     const toggle = (label, get, set, note) => { const r = document.createElement('div'); r.className = 'item'; r.innerHTML = `<div><div class="t"></div><div class="d"></div></div><button class="btn small"></button>`; r.querySelector('.t').textContent = label; r.querySelector('.d').textContent = note || ''; const b = r.querySelector('button'); const upd = () => b.textContent = get() ? 'On' : 'Off'; upd(); b.onclick = () => { set(!get()); upd(); }; tb.appendChild(r); };
     const pick = (label, opts, get, set) => { const r = document.createElement('div'); r.innerHTML = `<p class="note" style="margin:10px 0 6px">${label}</p><div class="row"></div>`; for (const [v, t] of opts) { const b = document.createElement('button'); b.className = 'btn small' + (get() === v ? ' sel' : ''); b.textContent = t; b.onclick = () => { set(v); r.querySelectorAll('.btn').forEach((x) => x.classList.remove('sel')); b.classList.add('sel'); }; r.lastChild.appendChild(b); } tb.appendChild(r); };
     const pages = {
+      'Language': () => {
+        pick('Language / اللغة', [['ar', 'العربية'], ['en', 'English']], () => (isAR() ? 'ar' : 'en'), (v) => { S.lang = v; setLang(v); G.saveSettings(); });
+        const n = document.createElement('p'); n.className = 'note'; n.setAttribute('data-noi18n', ''); n.textContent = 'العربية: واجهة من اليمين لليسار، حوار باللهجة المصرية، وأصوات عربية إن توفرت على جهازك. · English: left-to-right interface.'; tb.appendChild(n);
+      },
       Gameplay: () => {
         pick('Difficulty', [['easy', 'Relaxed'], ['normal', 'Normal'], ['hard', 'Hard']], () => S.difficulty, (v) => S.difficulty = v);
         pick('Violence', [['full', 'Full (light blood)'], ['reduced', 'Reduced (no blood)'], ['off', 'Minimal (knockouts only, softer effects)']], () => S.violence, (v) => S.violence = v);
@@ -128,7 +135,7 @@ export class Menus {
         slider('Time of day', 0, 23.5, 0.5, () => G.env.hour, (v) => G.env.setHour(v), (v) => String(Math.floor(v)).padStart(2, '0') + ':' + (v % 1 ? '30' : '00'));
         pick('Weather', [['auto', 'Dynamic'], ...Object.entries(WEATHERS).map(([k, w]) => [k, w.label])], () => (G.env.autoWeather ? 'auto' : G.env.weatherKey), (v) => { if (v === 'auto') G.env.autoWeather = true; else { G.env.autoWeather = false; G.env.setWeather(v); } });
       },
-      Audio: () => { for (const [k, t] of [['master', 'Master'], ['music', 'Music'], ['ambience', 'Street ambience'], ['voices', 'Voices & crowd'], ['traffic', 'Traffic'], ['effects', 'Effects'], ['ui', 'Interface']]) slider(t, 0, 1, 0.01, () => A.levels[k], (v) => A.setLevel(k, v)); toggle('Spoken dialogue (browser voice)', () => S.tts, (v) => S.tts = v, 'Uses your device\'s built-in speech voices for story calls. Availability varies by device.'); toggle('Mute everything', () => A.muted, (v) => { A.muted = v; A.applyLevels(); }); },
+      Audio: () => { for (const [k, t] of [['master', 'Master'], ['music', 'Music'], ['ambience', 'Ambient city'], ['voices', 'Dialogue & crowd'], ['traffic', 'Vehicles'], ['effects', 'Effects'], ['ui', 'Notifications'], ['phone', 'Phone calls']]) slider(t, 0, 1, 0.01, () => A.levels[k], (v) => A.setLevel(k, v)); toggle('Spoken dialogue (browser voice)', () => S.tts, (v) => S.tts = v, 'Uses your device\'s built-in speech voices for story calls. Availability varies by device.'); toggle('Mute everything', () => A.muted, (v) => { A.muted = v; A.applyLevels(); }); },
       Graphics: () => { pick('Quality preset', [['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra']], () => S.quality, (v) => { S.quality = v; G.applyQuality(v); }); slider('Render scale', 0.5, 1, 0.05, () => S.renderScale, (v) => { S.renderScale = v; G.resize(); }); toggle('Shadows', () => S.shadows, (v) => { S.shadows = v; G.applyShadows(); }); toggle('Performance mode (auto-adjust when FPS drops)', () => S.autoPerf, (v) => S.autoPerf = v); toggle('Show FPS', () => S.showFps, (v) => S.showFps = v); },
       Controls: () => {
         slider('Mouse sensitivity', 0.2, 3, 0.05, () => G.input.sens, (v) => G.input.sens = v, (v) => v.toFixed(2)); slider('Touch camera sensitivity', 0.3, 3, 0.05, () => G.input.touchSens, (v) => G.input.touchSens = v, (v) => v.toFixed(2));

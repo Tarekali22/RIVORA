@@ -4,9 +4,9 @@
 // Only active when the multi-file build has loaded the models into window.RIVORA_REAL.
 import { clamp } from '../core/util.js';
 
-export const MALE = ['carlos', 'ryan', 'luca', 'ethan', 'andre'];
-export const FEMALE = ['emma', 'hannah', 'mei', 'priya'];
-export const REAL_NAMES = { carlos: 'Carlos', ryan: 'Ryan', luca: 'Luca', ethan: 'Ethan', andre: 'Andre', emma: 'Emma', hannah: 'Hannah', mei: 'Mei', priya: 'Priya' };
+export const MALE = ['carlos', 'ryan', 'luca', 'ethan', 'andre', 'arjun', 'daniel', 'leo', 'noah'];
+export const FEMALE = ['emma', 'hannah', 'mei', 'priya', 'mia', 'olivia'];
+export const REAL_NAMES = { carlos: 'Carlos', ryan: 'Ryan', luca: 'Luca', ethan: 'Ethan', andre: 'Andre', emma: 'Emma', hannah: 'Hannah', mei: 'Mei', priya: 'Priya', arjun: 'Arjun', daniel: 'Daniel', leo: 'Leo', noah: 'Noah', mia: 'Mia', olivia: 'Olivia' };
 export const realAvailable = () => !!(typeof window !== 'undefined' && window.RIVORA_REAL && window.RIVORA_REAL.chars);
 export const realModels = () => (realAvailable() ? Object.keys(window.RIVORA_REAL.chars) : []);
 
@@ -86,6 +86,8 @@ function tinted(model, m0, key) {
 }
 
 let HASH = 0;
+const TONES = { base: null, olive: [0.93, 0.84, 0.75], tan: [0.86, 0.73, 0.62], brown: [0.72, 0.57, 0.46], deep: [0.55, 0.42, 0.34] };
+const DARK_BASE = { andre: 2, priya: 1, arjun: 1 }; const SKINC = {};
 export function pickModel(a) {
   const names = realModels(); if (!names.length) return null;
   if (a.real && names.includes(a.real)) return a.real;
@@ -104,7 +106,7 @@ export class RealSkin {
     this.B = bonesOf(this.scene);
     for (const k in this.B) if (T.refL[k]) this.B[k].quaternion.copy(T.refL[k]);
     this.meshes = []; this.outfits = [];
-    this.scene.traverse((o) => { if (o.isMesh) { o.castShadow = opts.shadow !== false; o.receiveShadow = true; o.frustumCulled = true; this.meshes.push(o); if (/Outfit/i.test(o.name)) { o.userData.m0 = o.material; this.outfits.push(o); } } });
+    this.scene.traverse((o) => { if (o.isMesh) { o.castShadow = opts.shadow !== false; o.receiveShadow = true; o.frustumCulled = true; this.meshes.push(o); const nm = o.name + ' ' + (o.parent ? o.parent.name : ''); o.userData.nm = nm; if (/Outfit|Top_/i.test(nm)) { o.userData.m0 = o.material; this.outfits.push(o); } } });
     // bone chain used for retargeting (ancestors of every mapped bone, parents first)
     const need = new Set();
     for (const r of Object.values(MAP)) { let b = this.B[r]; while (b && b.isBone) { need.add(b); b = b.parent; } }
@@ -123,6 +125,18 @@ export class RealSkin {
     if (key === this.tintKey) return; this.tintKey = key;
     for (const o of this.outfits) o.material = tinted(this.name, o.userData.m0, key);
   }
+  // skin tone variation (multiplies the scanned skin texture) for more diverse people from the same licensed bodies
+  setSkin(tone) {
+    tone = tone || 'base'; if (DARK_BASE[this.name] && tone !== 'base') tone = DARK_BASE[this.name] === 2 ? 'base' : tone === 'deep' || tone === 'brown' ? 'olive' : tone;
+    if (tone === this.skinKey) return; this.skinKey = tone; const mul = TONES[tone] || null;
+    for (const o of this.meshes) {
+      if (o.userData.m0skin === undefined) { const nm = o.userData.nm || o.name, mn = o.material.name || ''; const hair = /Hair/i.test(nm) || /opacity/i.test(mn); const skin = !hair && (/Skin_/i.test(nm) || ((/head|skin/i.test(mn) || /body/i.test(mn)) && !/Outfit|Top_|Trousers|Shoes/i.test(nm))); o.userData.m0skin = skin || hair ? o.material : null; o.userData.hair = hair; }
+      const m0 = o.userData.m0skin; if (!m0) continue;
+      if (!mul) { o.material = m0; continue; }
+      const hm = o.userData.hair ? [0.42, 0.38, 0.36] : mul; const k = m0.uuid + '|' + tone; let m = SKINC[k]; if (!m) { m = m0.clone(); m.color = m0.color.clone().multiply(new THREE.Color(...hm)); SKINC[k] = m; }
+      o.material = m;
+    }
+  }
   setShadow(on) { for (const m of this.meshes) m.castShadow = on; }
   // an object placed under this socket behaves as if it were parented to the procedural bone
   socket(proc) {
@@ -132,6 +146,7 @@ export class RealSkin {
     s.scale.setScalar(1 / this.T.k); (this.B[rb] || this.scene).add(s); this.sockets[proc] = s; return s;
   }
   _clipFor(s, mode) {
+    if (this.forceProc) return null;
     if (mode !== 'loco' || s.crouch || s.guard || s.action || s.wave || s.handsUp || s.hurt || s.noMocap) return null;
     const sp = s.speed || 0;
     if (s.item === 'phoneCall' && sp < 0.3) return this.acts.Phone ? 'Phone' : null;

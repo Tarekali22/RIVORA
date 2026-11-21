@@ -1,6 +1,8 @@
 // Procedural San Aurelia: terrain, roads, signals, buildings, coast, port, airport, hillside, props.
 // Also owns static collision (building boxes, prop circles, walkable decks) and surface queries.
 import { GeoBuilder, prim } from '../core/geo.js';
+import { buildNourBlock, finishNour } from './nour.js';
+import { addWind, upgradeCityMaterials } from './pbr.js';
 import { rng, clamp, smoothstep, SpatialGrid, lerp, mixHex, shadeHex, fbm } from '../core/util.js';
 import * as L from './layout.js';
 import * as T from './textures.js';
@@ -30,6 +32,7 @@ export class City {
     this.buildProps();
     this.buildSignals();
     this.finishBuilders();
+    upgradeCityMaterials(this, quality);
   }
 
   // ---------------- materials ----------------
@@ -244,6 +247,7 @@ export class City {
     }
     if (o.shop) for (const side of o.shop) this.shopfront(x0, z0, x1, z1, side, y0);
     if (!o.noCollide) this.addBox(x0, z0, x1, z1, y0 + h, -50, o.tag);
+    (this.bldList || (this.bldList = [])).push({ x0, z0, x1, z1, top: y0 + h, kind });
     return { x0, z0, x1, z1, top: y0 + h };
   }
   shopfront(x0, z0, x1, z1, side, y0) {
@@ -286,7 +290,9 @@ export class City {
       else if (d === 'industrial') this.lotIndustrial(b);
       else if (d === 'boardwalk') this.lotBoardwalk(b, stucco);
       else if (d === 'marina') this.lotMarina(b);
+      else if (d === 'nour') buildNourBlock(this, b);
     }
+    finishNour(this);
   }
   lotDowntown(b) {
     const r = this.r, cxD = 60, czD = -120;
@@ -821,7 +827,7 @@ export class City {
     const b = new GeoBuilder();
     b.add(prim('cyl', 0.18, 0.26, 3, 7), 0, 1.5, 0, 0, 0, 0, 1, 1, 1, '#6b5038');
     b.add(prim('ico', 2.2, 1), 0, 4.4, 0, 0, 0, 0, 1, 0.85, 1, '#4f7d34'); b.add(prim('ico', 1.6, 1), 0.9, 5.3, 0.4, 0, 0, 0, 1, 1, 1, '#5d8f3c'); b.add(prim('ico', 1.5, 1), -0.8, 5.0, -0.6, 0, 0, 0, 1, 1, 1, '#456f2e');
-    const geo = b.build(); const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    const geo = b.build(); const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true }); if (this.windU) addWind(mat, this.windU, 2.2, 5, 0.32);
     const pts = this.treesAt.filter(([x, z]) => !this.inBuilding(x, z));
     const im = new THREE.InstancedMesh(geo, mat, pts.length); im.castShadow = true;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), c = new THREE.Color();
@@ -831,7 +837,8 @@ export class City {
   _instancedPines() {
     const b = new GeoBuilder(); b.add(prim('cyl', 0.15, 0.25, 2, 6), 0, 1, 0, 0, 0, 0, 1, 1, 1, '#5a4330');
     for (let k = 0; k < 3; k++) b.add(prim('cone', 2.2 - k * 0.5, 3, 7), 0, 2.8 + k * 1.7, 0, 0, 0, 0, 1, 1, 1, k % 2 ? '#2f5d3a' : '#3a6b43');
-    const im = new THREE.InstancedMesh(b.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }), this.pinesAt.length);
+    const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }); if (this.windU) addWind(pineMat, this.windU, 2.5, 7, 0.22);
+    const im = new THREE.InstancedMesh(b.build(), pineMat, this.pinesAt.length);
     im.castShadow = true;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
     this.pinesAt.forEach(([x, z, h], i) => { const sc = 0.9 + this.r() * 1.2; q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.r() * 6.28); m.compose(p.set(x, h - 0.2, z), q, s.set(sc, sc, sc)); im.setMatrixAt(i, m); });

@@ -3,21 +3,22 @@ import { clamp } from './util.js';
 
 export const DEFAULT_BINDINGS = {
   forward: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
-  sprint: ['ShiftLeft', 'ShiftRight'], jump: ['Space'], crouch: ['KeyC', 'ControlLeft'],
-  interact: ['KeyE'], vehicle: ['KeyF'], punch: ['KeyJ', 'Mouse0'], kick: ['KeyK'], block: ['KeyL', 'Mouse2'], dodge: ['KeyQ'], push: ['KeyG'],
-  phone: ['KeyP', 'Backquote'], map: ['KeyM'], pause: ['Escape'], camera: ['KeyV'], horn: ['KeyH'],
-  companion: ['KeyZ'], companionCome: ['KeyX'], lights: ['KeyN'], radio: ['KeyR'],
+  sprint: ['ShiftLeft', 'ShiftRight'], jump: ['Space'], crouch: ['ControlLeft', 'ControlRight'],
+  interact: ['Enter', 'NumpadEnter', 'KeyE'], vehicle: ['KeyF'], punch: ['Mouse0', 'KeyJ'], kick: ['KeyK'], block: ['Mouse2', 'KeyL'], dodge: ['KeyQ'], push: ['KeyG'],
+  reload: ['KeyR'], weaponNext: ['KeyT'], weaponPrev: ['KeyY'], holster: ['KeyH'],
+  phone: ['Tab', 'KeyP', 'Backquote'], map: ['KeyM'], pause: ['Escape'], camera: ['KeyC', 'KeyV'], horn: ['KeyH'],
+  companion: ['KeyZ'], companionCome: ['KeyX'], lights: ['KeyN'], radio: ['KeyR'], talk: ['KeyB'], photo: ['KeyO'],
 };
 export const ACTION_LABELS = {
-  forward: 'Move forward', back: 'Move back', left: 'Move left', right: 'Move right', sprint: 'Sprint / throttle', jump: 'Jump / handbrake / ascend', crouch: 'Crouch / descend',
-  interact: 'Interact', vehicle: 'Enter / exit vehicle', punch: 'Punch', kick: 'Kick (with W: knee)', block: 'Block', dodge: 'Dodge', push: 'Shove',
-  phone: 'Phone', map: 'Map', pause: 'Pause', camera: 'Camera view', horn: 'Horn', companion: 'Companion: follow / stay', companionCome: 'Companion: come here', lights: 'Headlights', radio: 'Car radio',
+  forward: 'Move forward', back: 'Move back', left: 'Move left', right: 'Move right', sprint: 'Sprint / throttle', jump: 'Jump / handbrake / ascend', crouch: 'Crouch (tap) / descend',
+  interact: 'Interact (contextual: vehicles, doors, people)', vehicle: 'Enter / exit vehicle (shortcut)', punch: 'Punch / fire', kick: 'Kick (with W: knee)', block: 'Block / aim', dodge: 'Dodge', push: 'Shove',
+  reload: 'Reload (on foot)', weaponNext: 'Next weapon', weaponPrev: 'Previous weapon', holster: 'Holster weapon (on foot)',
+  phone: 'Phone', map: 'Map', pause: 'Pause / close', camera: 'Camera view', horn: 'Horn (in vehicle)', companion: 'Companion: follow / stay', companionCome: 'Companion: come here', lights: 'Headlights', radio: 'Car radio (in vehicle)', talk: 'Push-to-talk microphone (hold)', photo: 'Photo mode',
 };
-
 export class Input {
   constructor(el) {
     this.el = el; this.bindings = JSON.parse(JSON.stringify(DEFAULT_BINDINGS));
-    this.keys = new Set(); this.prev = new Set(); this.now = new Set();
+    this.keys = new Set(); this.prev = new Set(); this.now = new Set(); this.tapped = new Set(); // tapped: key-downs since the last frame, so a quick tap is never missed at low frame rates
     this.virtual = new Set(); this.vPressed = new Set();
     this.look = { x: 0, y: 0 }; this.stick = { x: 0, y: 0 }; this.gp = { x: 0, y: 0, lx: 0, ly: 0, rt: 0, lt: 0 };
     this.sens = 1; this.invertY = false; this.touchSens = 1;
@@ -26,8 +27,8 @@ export class Input {
     const kd = (e) => {
       if (this.listening) { e.preventDefault(); this._finishRebind(e.code); return; }
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Backquote'].includes(e.code)) e.preventDefault();
-      this.keys.add(e.code);
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Backquote', 'Enter', 'NumpadEnter'].includes(e.code)) { if (!(e.target && e.target.closest && e.target.closest('button,a,[contenteditable]') && (e.code === 'Enter' || e.code === 'Space'))) e.preventDefault(); }
+      if (!e.repeat) this.tapped.add(e.code); this.keys.add(e.code);
     };
     const ku = (e) => this.keys.delete(e.code);
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
@@ -38,12 +39,13 @@ export class Input {
       if (this.listening) { e.preventDefault(); this._finishRebind('Mouse' + e.button); return; }
       if (!this.enabled) return;
       downX = e.clientX; downY = e.clientY; downT = performance.now(); moved = 0;
-      if (this.locked) this.keys.add('Mouse' + e.button);
-      else { this.dragging = true; if (e.button === 2) this.keys.add('Mouse2'); }
+      if (this.locked) { this.keys.add('Mouse' + e.button); this.tapped.add('Mouse' + e.button); }
+      else if (e.button === 0 && this.fireHold) this.keys.add('Mouse0'); // gun drawn without pointer lock: hold left to fire, right-drag aims and looks
+      else { this.dragging = true; this.dragBtn = e.button; if (e.button === 2) this.keys.add('Mouse2'); }
     });
     window.addEventListener('mouseup', (e) => {
-      if (!this.locked && this.dragging && e.button === 0 && moved < 6 && performance.now() - downT < 260 && this.enabled) { this.vPressed.add('punch'); }
-      this.dragging = false; this.keys.delete('Mouse' + e.button);
+      if (!this.locked && this.dragging && e.button === 0 && this.dragBtn === 0 && moved < 6 && performance.now() - downT < 260 && this.enabled) { this.vPressed.add('punch'); }
+      if (e.button === this.dragBtn) this.dragging = false; this.keys.delete('Mouse' + e.button);
     });
     window.addEventListener('mousemove', (e) => {
       if (!this.enabled) return;
@@ -65,6 +67,7 @@ export class Input {
     for (const a of this.virtual) this.now.add(a);
     this._pollGamepad();
     this.pressedSet = new Set([...this.now].filter((a) => !this.prev.has(a)));
+    if (this.tapped.size) { for (const [act, codes] of Object.entries(this.bindings)) if (codes.some((c) => this.tapped.has(c))) this.pressedSet.add(act); this.tapped.clear(); }
     for (const a of this.vPressed) this.pressedSet.add(a);
     this.vPressed.clear();
   }

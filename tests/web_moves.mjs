@@ -6,7 +6,7 @@ const page = await ctx.newPage(); const logs = [];
 page.on('pageerror', (e) => logs.push('pageerror: ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 5).join('\n')));
 page.on('console', (m) => { if (m.type() === 'error') logs.push('err: ' + m.text()); });
 await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-await page.goto('http://localhost:8777/index.html');
+await page.goto('http://localhost:8777/web/index.html');
 const G = (fn, arg) => page.evaluate(fn, arg);
 await page.waitForSelector('#title', { timeout: 300000 });
 await G(() => { window.__rivora._noBlurPause = true; window.__rivora.testFast = true; });

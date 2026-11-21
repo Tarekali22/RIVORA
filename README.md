@@ -5,7 +5,7 @@ A browser-playable, third-person open-world game set in the fictional coastal ci
 - **Engine:** three.js r158 (WebGL) loaded from jsDelivr (unpkg fallback); everything else is original code in `src/`.
 - **Assets:** all 3D geometry, textures, sounds and music are generated procedurally at runtime. No downloads, no API keys, no accounts.
 - **Deliverables:**
-  - `dist/web/` — **realistic build** (merged with *Miami Nights 2*): motion-captured Microsoft Rocketbox people (MIT) driven by RIVORA's procedural rig, real car models (Ferrari 458 / Car Concept / muscle car, CC BY 4.0), bloom post-processing and local three.js r160. Multi-file, ~17 MB. Add `?classic=1` to the URL for the procedural look.
+  - `dist/web/` — **realistic build** (merged with *Miami Nights 2*): motion-captured Microsoft Rocketbox people (MIT) driven by RIVORA's procedural rig, real car models (Car Concept / classic muscle car, CC BY 4.0), bloom post-processing and local three.js r160. Multi-file, ~17 MB. Add `?classic=1` to the URL for the procedural look.
   - `dist/rivora.html` — single-file procedural build (~410 KB).
 
 ## Build & test (cloud workspace)
@@ -42,7 +42,6 @@ Personal portrait photos used to configure the default hero are **not** stored i
 ## Third-party assets (realistic build)
 
 - Microsoft Rocketbox avatars — MIT licence.
-- Ferrari 458 by vicent091036 — CC BY 4.0 (three.js examples).
 - Car Concept by Eric Chadwick / DGG — CC BY 4.0 (Khronos glTF samples).
 - Classic muscle car by Karol Miklas — CC BY 4.0 (pmndrs/racing-game).
 - three.js r160 — MIT.

@@ -12,6 +12,7 @@ export class Vehicle {
     this.color = color || this.spec.colors[Math.floor(R() * this.spec.colors.length)];
     const m = buildVehicleModel(this.spec, this.color); this.m = m;
     this.object = m.root; this.body = m.body; game.scene.add(this.object);
+    if (this.spec.decorate) try { this.spec.decorate(this); } catch (e) { console.warn('[RIVORA] decorate', e); }
     this.pos = this.object.position; this.heading = 0; this.vel = new THREE.Vector3(); this.yawRate = 0; this.speed = 0;
     this.steer = 0; this.steerVis = 0; this.throttle = 0; this.health = 100; this.disabled = false; this.air = false; this.vy = 0;
     this.pitchAng = 0; this.rollAng = 0; this.bodyPitch = 0; this.bodyRoll = 0; this.lean = 0;
@@ -57,21 +58,29 @@ export class Vehicle {
     let a = 0; this.brake = false;
     const evOk = !s.electric || this.battery > 0;
     const power = s.power * (evOk ? 1 : 0.15) * (this.health < 25 ? 0.5 : 1);
-    if (t > 0.02) { if (vF < -0.6) { a = 9 * t; this.brake = true; } else a = power * t * (1 - Math.pow(clamp(vF / s.top, 0, 1), 2)); }
+    if (t > 0.02) { if (vF < -0.6) { a = 9 * t; this.brake = true; } else a = power * t * (1 - Math.pow(clamp(vF / s.top, 0, 1), 2)) * (this.shiftT > 0 ? 0.35 : 1); }
     else if (t < -0.02) { if (vF > 0.6) { a = -10 * -t; this.brake = true; } else a = power * 0.55 * t * (1 - Math.pow(clamp(-vF / (s.top * 0.3), 0, 1), 2)); }
     else { a = -Math.sign(vF) * Math.min(Math.abs(vF) / dt, 0.6 + Math.abs(vF) * 0.02); }
     if (c.handbrake && this.type !== 'bike') { a -= Math.sign(vF) * Math.min(Math.abs(vF) / dt, 5); this.brake = true; }
     if (off && !s.offroad) a -= vF * 0.25;
     vF += a * dt;
     if (Math.abs(vF) < 0.05 && Math.abs(t) < 0.02) vF = 0;
-    // steering
-    this.steer = damp(this.steer, clamp(c.steer, -1, 1), 7, dt);
-    const maxS = s.steer / (1 + Math.abs(vF) * 0.05);
-    const yawT = vF * Math.tan(this.steer * maxS) / this.m.wheelBase;
-    const hb = c.handbrake && Math.abs(vF) > 7 && this.type !== 'bike';
-    this.yawRate = damp(this.yawRate, yawT * (hb ? 1.35 : 1), (hb ? 3 : 9) * grip, dt);
-    vR *= Math.exp(-dt * (hb ? 1.4 : 9 * grip) * (this.type === 'bike' ? 1.5 : 1));
-    this.slip = Math.abs(vR) > 2.5 ? clamp((Math.abs(vR) - 2.5) / 6, 0, 1) : hb ? 0.5 : 0;
+    // steering: slower, smaller lock at speed; weight transfer; tyre grip limit (understeer); handbrake / power-over drift
+    const spd = Math.abs(vF), sf = clamp(spd / 35, 0, 1);
+    this.steer = damp(this.steer, clamp(c.steer, -1, 1), (this.type === 'bike' ? 6.5 : 7.5) - 4 * sf, dt);
+    const maxS = s.steer / (1 + spd * (this.type === 'bike' ? 0.06 : 0.075));
+    let yawT = vF * Math.tan(this.steer * maxS) / this.m.wheelBase;
+    this.wt = damp(this.wt || 0, clamp(-a / 12, -0.6, 0.6), 5, dt); // + under braking (front loaded)
+    const frontGrip = grip * (1 + this.wt * 0.35), rearGrip = grip * (1 - this.wt * 0.3);
+    const latMax = 9.81 * 0.95 * Math.min(frontGrip, 1.6);
+    if (spd > 1 && Math.abs(vF * yawT) > latMax) yawT = Math.sign(yawT) * latMax / spd;
+    const hb = c.handbrake && spd > 7 && this.type !== 'bike';
+    const pwr = this.type !== 'bike' && s.power > 9 && !s.electric && t > 0.85 && spd > 6 && spd < 28 && Math.abs(this.steer) > 0.35;
+    this.drift = damp(this.drift || 0, hb ? 1 : pwr ? 0.45 : 0, hb ? 6 : 2.2, dt); const dr = this.drift;
+    this.yawRate = damp(this.yawRate, yawT * (1 + dr * 0.55) + (dr > 0.2 ? this.steer * dr * 0.35 * Math.sign(vF) : 0), lerp(9 * rearGrip, 2.6, dr), dt);
+    vR *= Math.exp(-dt * lerp(9 * rearGrip, 1.15, dr) * (this.type === 'bike' ? 1.5 : 1));
+    vF -= Math.sign(vF) * Math.min(spd, Math.abs(vR) * 0.22 * dt); // sliding scrubs speed
+    this.slip = Math.abs(vR) > 2.2 ? clamp((Math.abs(vR) - 2.2) / 6, 0, 1) : hb ? 0.5 : 0;
     if (this.air) { this.yawRate *= 0.98; }
     this.heading = wrapAngle(this.heading + this.yawRate * dt);
     const nfx = Math.sin(this.heading), nfz = Math.cos(this.heading);
@@ -83,9 +92,22 @@ export class Vehicle {
     this._vertical(dt);
     // weight transfer visuals
     const latA = vF * this.yawRate;
-    this.bodyRoll = damp(this.bodyRoll, clamp(latA * 0.012, -0.08, 0.08), 6, dt);
-    this.bodyPitch = damp(this.bodyPitch, clamp(-a * 0.006, -0.05, 0.05), 6, dt);
-    if (this.type === 'bike') { this.lean = damp(this.lean, clamp(this.steer * Math.min(1, Math.abs(vF) / 12) * 0.55, -0.6, 0.6), 5, dt); this.bodyRoll = -this.lean; this.cadence = Math.abs(vF) * 1.6; }
+    // suspension as a spring-damper: body rolls in corners, dives under braking, squats on throttle, then settles
+    const rollT = clamp(latA * 0.013, -0.09, 0.09), pitchT = clamp(-a * 0.0065, -0.055, 0.055);
+    this.rollV = (this.rollV || 0) + ((rollT - this.bodyRoll) * 60 - (this.rollV || 0) * 9) * dt; this.bodyRoll = clamp(this.bodyRoll + this.rollV * dt, -0.14, 0.14);
+    this.pitchV = (this.pitchV || 0) + ((pitchT - this.bodyPitch) * 70 - (this.pitchV || 0) * 10) * dt; this.bodyPitch = clamp(this.bodyPitch + this.pitchV * dt, -0.09, 0.09);
+    if (this.type === 'bike') { // lean from real cornering physics, upright and stable at walking pace
+      const leanT = clamp(Math.atan2(latA, 9.81), -0.72, 0.72) * clamp((Math.abs(vF) - 1.5) / 5, 0, 1);
+      this.lean = damp(this.lean, leanT, 6, dt); this.bodyRoll = -this.lean; this.cadence = Math.abs(vF) * 1.6; }
+    // gearbox (player cars): ratios, up/down shifts with a short torque dip, normalised rpm for the engine sound
+    if (this.type === 'car' && this.driver === 'player') {
+      const fr = clamp(spd / s.top, 0, 1);
+      if (s.electric) { this.gear = vF < -0.5 ? 'R' : 1; this.rpmN = 0.1 + fr * 1.1; }
+      else { const RT = [0, 0.17, 0.31, 0.47, 0.63, 0.8, 1.0]; let g = typeof this.gear === 'number' ? this.gear : 1;
+        if (fr > RT[g] * 0.93 && g < 6 && t > 0.1) { g++; this.shiftT = 0.22; } else if (g > 1 && fr < RT[g - 1] * 0.72) { g--; this.shiftT = 0.1; }
+        this.gear = g; const lo = RT[g - 1] * 0.6, hi = RT[g]; this.rpmN = 0.14 + clamp((fr - lo) / Math.max(0.05, hi - lo), 0, 1) * (0.9 + 0.1 * Math.max(0, t)); if (vF < -0.5) this.gear = 'R'; }
+      if (this.shiftT > 0) this.shiftT -= dt;
+    }
     // EV battery
     if (s.electric && this.driver) { this.battery = clamp(this.battery - Math.max(0, t) * Math.abs(vF) * 0.0009 * dt * 60 + (this.brake ? Math.abs(vF) * 0.00025 * dt * 60 : 0), 0, 100); }
     // water: cars sink
@@ -132,7 +154,7 @@ export class Vehicle {
   hurt(dmg, imp = 5) {
     const G = this.game; if (this.type === 'bike' && imp > 9 && this.driver === 'player') { G.vehicles.eject(this, true); }
     this.health = Math.max(0, this.health - dmg);
-    if (imp > 3.5) { G.audio.impact(this.pos, clamp(imp / 20, 0.1, 1)); if (this.driver === 'player') { G.cam.addShake(clamp(imp / 18, 0.1, 0.8)); if (G.player.state === 'vehicle') G.player.damage(Math.max(0, imp - 14) * 1.5, null, { fall: true }); } }
+    if (imp > 3.5) { G.audio.impact(this.pos, clamp(imp / 20, 0.1, 1)); if (this.driver === 'player') { G.cam.addShake(clamp(imp / 18, 0.1, 0.8)); if (G.player.state === 'vehicle') G.player.damage(Math.max(0, imp - 14) * 1.5, null, { fall: true, lethal: imp > 45 }); } }
     if (this.health <= 0 && !this.disabled) { this.disabled = true; bus.emit('vehicleWrecked', this); }
     if (this.owner === 'parked' && imp > 2) this.triggerAlarm();
     bus.emit('vehicleHit', this, imp);
@@ -363,7 +385,7 @@ export class VehicleManager {
       if (input.pressed('lights')) v.manualLights = !(v.manualLights ?? v.lightsOn);
       if (input.pressed('radio') && v.type === 'car') { const st = [null, 'chill', 'drive']; this.radio = st[(st.indexOf(this.radio || null) + 1) % st.length]; G.ui.toast('Radio', this.radio === 'chill' ? 'Coast FM — chill' : this.radio === 'drive' ? 'Pulse 104 — night drive' : 'Radio off', 'info', 1.5); }
       const ev = this.engineVoice;
-      if (ev) G.audio.engineSet(ev, { rpm: v.type === 'heli' ? v.rotor : v.type === 'plane' ? v.throttleP : clamp(Math.abs(v.speed) / (v.spec.top * 0.4) % 1.2 * 0.6 + Math.abs(v.speed) / v.spec.top * 0.5, 0, 1.4), load: Math.max(0, v.throttle), speed: Math.abs(v.speed), pos: v.pos, pitch: v.type === 'bike' ? 1.6 : 1 });
+      if (ev) G.audio.engineSet(ev, { rpm: v.type === 'heli' ? v.rotor : v.type === 'plane' ? v.throttleP : v.rpmN != null ? v.rpmN : clamp(Math.abs(v.speed) / (v.spec.top * 0.4) % 1.2 * 0.6 + Math.abs(v.speed) / v.spec.top * 0.5, 0, 1.4), load: Math.max(0, v.throttle), speed: Math.abs(v.speed), pos: v.pos, pitch: v.type === 'bike' ? 1.6 : 1 });
     }
   }
   _pairs(dt) {

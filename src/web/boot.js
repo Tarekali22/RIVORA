@@ -14,7 +14,7 @@ const touch = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || 
 const q = new URLSearchParams(location.search);
 const bar = document.querySelector('#loading .bar i'), msg = document.querySelector('#loading .msg');
 const CH = touch ? ['carlos', 'ryan', 'emma', 'priya', 'andre', 'mei'] : ['carlos', 'ryan', 'luca', 'ethan', 'andre', 'emma', 'hannah', 'mei', 'priya'];
-const CARS = ['car_sport_lo', 'car_concept', 'car_muscle', 'car_muscle_wheel'];
+const CARS = ['car_concept', 'car_muscle', 'car_muscle_wheel'];
 const HI = touch ? [] : ['carlos'];
 const loader = new GLTFLoader();
 async function glb(name) {
@@ -25,11 +25,14 @@ async function glb(name) {
 async function loadReal() {
   const list = [...CARS.map((n) => ['cars', n, n]), ...CH.map((n) => ['chars', n, 'c_' + n]), ...HI.map((n) => ['hi', n, 'p_' + n])];
   const R = { chars: {}, cars: {}, hi: {}, SkeletonUtils, BGU, post: { EffectComposer, RenderPass, UnrealBloomPass, OutputPass }, touch };
-  let done = 0; const up = () => { if (bar) bar.style.width = Math.round(done / list.length * 100) + '%'; if (msg) msg.textContent = 'Loading realistic people & cars… ' + Math.round(done / list.length * 100) + '%'; };
+  let done = 0; let ar = false; try { ar = (localStorage.getItem('rivora.lang') || (/^ar/i.test(navigator.language) ? 'ar' : 'en')) === 'ar'; } catch (e) {} const up = () => { const p = Math.round(done / list.length * 100); if (bar) bar.style.width = p + '%'; if (msg) msg.textContent = ar ? '\u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0634\u062e\u0635\u064a\u0627\u062a \u0648\u0627\u0644\u0633\u064a\u0627\u0631\u0627\u062a \u0627\u0644\u0648\u0627\u0642\u0639\u064a\u0629\u2026 ' + p + '%' : 'Loading realistic people & cars\u2026 ' + p + '%'; };
   up();
   await Promise.all(list.map(async ([kind, key, file]) => { R[kind][key] = await glb(file); done++; up(); }));
   window.RIVORA_REAL = R;
 }
 try { if (q.get('classic') !== '1') await loadReal(); }
 catch (e) { console.warn('[RIVORA] realistic assets unavailable, using procedural art', e); window.RIVORA_REAL = null; }
-const s = document.createElement('script'); s.src = './game.js'; document.body.appendChild(s);
+const s = document.createElement('script'); s.charset = 'utf-8'; s.src = './game.js'; document.body.appendChild(s);
+// more licensed people stream in after the game is running (more variety without a longer first load)
+const EXTRA = touch ? ['arjun', 'mia'] : ['arjun', 'daniel', 'leo', 'mia', 'noah', 'olivia'];
+s.onload = () => { if (!window.RIVORA_REAL) return; setTimeout(async () => { for (const n of EXTRA) { try { window.RIVORA_REAL.chars[n] = await glb('c_' + n); } catch (e) { console.warn('[RIVORA] extra character', n, e); } await new Promise((r) => setTimeout(r, 1500)); } }, q.get('extra') === '0' ? 1e9 : 6000); };

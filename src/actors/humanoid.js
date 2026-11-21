@@ -210,6 +210,7 @@ export class Humanoid {
         mesh.visible = false;
         const top = a.top || {}, kind = top.type === 'police' ? 'police' : null;
         this.real.setTint(kind || (opts.tint === 'exact' ? (top.color || 'orig') : a.tint || 'orig'));
+        this.real.setSkin(a.skinTone);
       }
     } else if (this.real) { this.real.dispose(); this.real = null; }
     // re-attach held props
@@ -358,6 +359,7 @@ export class Humanoid {
     this.body.rotation.set(this.bodyPitch, 0, this.bodyRoll); this.body.position.y = this.bodyY;
     // when lying, keep body pivot near hips so the figure rests on the ground
     if (Math.abs(this.bodyPitch) > 0.8 && mode !== 'swim' && mode !== 'freefall' && mode !== 'activity') this.body.position.y = this.bodyY + 0.0;
+    if (this.postPose) this.postPose(this, dt);
     if (this.real) this.real.sync(dt, this, s, mode);
   }
   _guard(add, t) {

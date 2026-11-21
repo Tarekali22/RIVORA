@@ -48,10 +48,15 @@ export class Phone {
     const G = this.game;
     if (page === 'messages') { h('Messages'); const ids = Object.keys(this.threads); if (!ids.length) li('No messages yet', ''); for (const id of ids) { const t = this.threads[id]; const last = t.msgs[t.msgs.length - 1]; li(CONTACTS[id] ? CONTACTS[id].name : id, (t.unread ? '● ' : '') + (last ? last.text.slice(0, 60) : ''), [['Open', () => { this.app = 'thread:' + id; this.render(); }]]); } }
     else if (page.startsWith('thread:')) {
-      const id = page.slice(7), t = this.threads[id]; h(CONTACTS[id] ? CONTACTS[id].name : id);
+      const id = page.slice(7), t = this.threads[id] || (this.threads[id] = { msgs: [] }); h(CONTACTS[id] ? CONTACTS[id].name : id);
       this.unread -= t.unread || 0; t.unread = 0;
       for (const m of t.msgs) { const d = document.createElement('div'); d.className = 'msg' + (m.me ? ' me' : ''); d.textContent = m.text; if (m.img) { const im = document.createElement('img'); im.className = 'target-photo'; im.src = m.img; im.alt = 'Photo attachment'; d.prepend(im); } if (m.coords) { const g = document.createElement('button'); g.className = 'pbtn'; g.textContent = 'Set GPS'; g.onclick = () => { G.ui.waypoint = { x: m.coords.x, z: m.coords.z }; G.ui.routeT = 0; G.ui.toast('GPS set', m.coords.label || 'Destination marked', 'info', 2); }; d.appendChild(g); } if (m.actions) for (const [label, fn] of m.actions) { const x = document.createElement('button'); x.className = 'pbtn'; x.textContent = label; x.onclick = () => { fn(); m.actions = null; this.render(); }; d.appendChild(x); } p.appendChild(d); }
-      if (CONTACTS[id] && !CONTACTS[id].system) { const c = document.createElement('button'); c.className = 'pbtn'; c.textContent = 'Call ' + CONTACTS[id].name.split(' ')[0]; c.onclick = () => this.callOut(id); p.appendChild(c); }
+      if (CONTACTS[id] && !CONTACTS[id].system) { const c = document.createElement('button'); c.className = 'pbtn'; c.textContent = 'Call ' + CONTACTS[id].name.split(' ')[0]; c.onclick = () => this.callOut(id); p.appendChild(c);
+        // compose: quick replies (Arabic / English) and free text; the contact answers in a moment
+        const ar = document.body.classList.contains('rtl'), qr = document.createElement('div'); qr.className = 'qr'; qr.setAttribute('data-noi18n', '');
+        for (const [k, a, e] of [['how', 'إزيك؟ عامل إيه؟', 'Hey, how are you?'], ['omw', 'أنا جاي في الطريق', 'On my way'], ['job', 'فيه شغل؟', 'Any work for me?'], ['thanks', 'شكرًا', 'Thanks!']]) { const b = document.createElement('button'); b.className = 'pbtn small'; b.textContent = ar ? a : e; b.onclick = () => this.sendText(id, b.textContent, k); qr.appendChild(b); }
+        const inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 140; inp.placeholder = ar ? 'اكتب رسالة… (Enter)' : 'Write a message… (Enter)'; inp.className = 'ptext'; inp.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.code === 'Enter' || ev.code === 'NumpadEnter') { ev.preventDefault(); if (inp.value.trim()) this.sendText(id, inp.value.trim()); inp.value = ''; } });
+        p.appendChild(qr); p.appendChild(inp); }
     }
     else if (page === 'contacts') { h('Contacts'); for (const [id, c] of Object.entries(CONTACTS)) { if (c.system || !G.contacts.has(id)) continue; li(c.name, c.role + (G.relations[id] ? ` · Friendship ${G.relations[id]}` : ''), [['Call', () => this.callOut(id)], ['Text', () => { this.app = 'thread:' + id; this.threads[id] = this.threads[id] || { msgs: [] }; this.render(); }, true]]); } }
     else if (page === 'calls') { h('Recent calls'); if (!this.calls.length) li('No calls', ''); for (const c of this.calls.slice(0, 15)) { c.seen = true; li(CONTACTS[c.id] ? CONTACTS[c.id].name : c.id, (c.missed ? 'Missed · ' : c.out ? 'Outgoing · ' : 'Incoming · ') + c.t, c.missed ? [['Call back', () => this.callOut(c.id)]] : []); } }
@@ -112,6 +117,14 @@ export class Phone {
     const handler = G.missions.onCallContact(id);
     if (handler) { this.incoming = { id, live: true }; this.render(); if (G.player.state === 'foot') G.player.holdItem('phoneCall'); Promise.resolve(handler()).then(() => this.hangup()); }
     else { G.ui.subtitle((CONTACTS[id] || {}).name, G.missions.smallTalk(id), 3.5); }
+  }
+  sendText(id, text, k) {
+    const G = this.game, t = this.threads[id] || (this.threads[id] = { msgs: [] }); t.msgs.push({ me: true, text }); this.render(); bus.emit('textSent', id, text);
+    const ar = document.body.classList.contains('rtl'), kind = k || (/شكر|thank/i.test(text) ? 'thanks' : /شغل|job|work/i.test(text) ? 'job' : /طريق|way|coming/i.test(text) ? 'omw' : 'how');
+    const R2 = { how: ['الحمد لله تمام! وإنت؟', 'All good, you?'], omw: ['تمام، مستنيك.', 'Great, waiting for you.'], thanks: ['العفو، في أي وقت.', 'Anytime.'], job: ['بص في تطبيق المهام، فيه شغل كتير النهارده.', 'Check the Jobs app — plenty of work today.'] };
+    let reply = R2[kind] ? (ar ? R2[kind][0] : R2[kind][1]) : G.missions.smallTalk(id);
+    if (kind !== 'job' && kind !== 'thanks' && Math.random() < 0.5) { const st = G.missions.smallTalk(id); if (st) reply = st; }
+    setTimeout(() => { t.msgs.push({ text: reply }); if (this.app !== 'thread:' + id || !this.open) { t.unread = (t.unread || 0) + 1; this.unread++; } G.audio.ui('ding'); this.render(); if (kind === 'job' && id === 'hassan' && G.nour) { const n = G.nour.nextId(); if (n && !G.missions.active) setTimeout(() => G.phone.ring('hassan', () => G.nour.callBrief(n), () => {}), 1500); } }, G.testFast ? 50 : 1500 + Math.random() * 1500);
   }
   takePhoto() {
     const G = this.game; this.close();

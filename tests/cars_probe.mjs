@@ -1,0 +1,23 @@
+// Realistic build: every street car uses an original or generic licensed body (no real-brand replicas); screenshot for review.
+import { launch, sleep, shotDir } from './harness.mjs';
+const b = await launch(); const ctx = await b.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+await ctx.addInitScript(() => { try { localStorage.setItem('rivora.lang', 'en'); } catch (e) {} });
+const page = await ctx.newPage(); page.setDefaultTimeout(150000); const errs = [];
+page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/ERR_FAILED|favicon/.test(m.text())) errs.push(m.text().slice(0, 200)); });
+await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+await page.goto('http://localhost:8777/web/index.html?extra=0');
+const G = (fn, a) => page.evaluate(fn, a);
+await page.waitForSelector('#title', { timeout: 300000 });
+await G(() => { const g = window.__rivora; g._noBlurPause = true; g.testFast = true; g._skipIntro = true; document.getElementById('title').remove(); g.audio.start(); g.newGame({ kind: 'dog', name: 'Rocket' }); });
+await page.waitForFunction(() => window.__rivora.running && !window.__rivora.cutscene, null, { timeout: 180000 });
+const info = await G(() => { const g = window.__rivora; g.env.setHour(12); const keys = ['strada', 'vortex', 'meridian', 'valence', 'ion', 'brawler', 'cab', 'police', 'ecab'];
+  const out = {}; keys.forEach((k, i) => { const v = g.vehicles.spawn(k, -300 + i * 7, 700, 0); out[k] = (v.m && v.m.real) || 'procedural'; });
+  out.loadedModels = Object.keys(window.RIVORA_REAL.cars); return out; });
+console.log(JSON.stringify(info));
+const allowed = new Set(['concept', 'muscle']);
+const bad = Object.entries(info).filter(([k, v]) => k !== 'loadedModels' && !allowed.has(v));
+console.log(bad.length === 0 && !info.loadedModels.includes('car_sport_lo') ? 'PASS street cars use only the original concept / generic muscle bodies' : 'FAIL ' + JSON.stringify(bad));
+await G(() => { const g = window.__rivora; g.paused = true; g.ui.showHUD(false); g.camera.position.set(-272, 6, 684); g.camera.lookAt(-272, 0.5, 700); g.renderNow(); });
+await sleep(500); await page.screenshot({ path: shotDir + '/cars_lineup.png' });
+console.log(errs.length ? 'FAIL errors: ' + errs.slice(0, 3).join(' | ') : 'PASS no console errors');
+await b.close();

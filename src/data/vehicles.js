@@ -26,6 +26,14 @@ export const VEHICLES = {
   skylark: { name: 'Skylark H4', cls: 'Helicopter', type: 'heli', body: 'heli', L: 11, W: 2.4, H: 3.2, power: 9, top: 62, price: 520000, colors: ['#1d3557', '#f1faee', '#e63946', '#0b090a'] },
   aerolite: { name: 'Aerolite 172', cls: 'Light aircraft', type: 'plane', body: 'plane', L: 8.3, W: 11, H: 2.7, power: 7, top: 75, price: 340000, colors: ['#ffffff', '#ffd166'] },
 };
+// Egyptian street vehicles for El Nour: a white taxi with the classic black-and-white checkered band, and a microbus.
+let CHK = null;
+function checker() { if (CHK) return CHK; const c = document.createElement('canvas'); c.width = 128; c.height = 16; const g = c.getContext('2d'); for (let i = 0; i < 16; i++) for (let j = 0; j < 2; j++) { g.fillStyle = (i + j) % 2 ? '#111' : '#f4f4f0'; g.fillRect(i * 8, j * 8, 8, 8); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.repeat.set(3, 1); return (CHK = new THREE.MeshStandardMaterial({ map: t, roughness: 0.4, metalness: 0.2 })); }
+function band(v, y, colMat, h = 0.16) { const d = v.m.dims || { L: v.spec.L, W: v.spec.W, H: v.spec.H }; for (const s of [-1, 1]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.02, h, d.L * 0.72), colMat); b.position.set(s * (d.W / 2 + 0.005), y, -0.02 * d.L); v.body.add(b); } }
+VEHICLES.ecab = { name: 'Nile Cab', cls: 'Egyptian taxi', type: 'car', body: 'sedan', L: 4.5, W: 1.76, H: 1.45, power: 6.2, top: 44, grip: 0.98, steer: 0.6, mass: 1250, price: 0, colors: ['#f4f4f0'], taxi: true,
+  decorate: (v) => { const d = v.m.dims || { H: 1.45 }; band(v, d.H * 0.52, checker()); const s = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.16, 0.22), new THREE.MeshBasicMaterial({ color: 0xfff2a8, toneMapped: false })); s.position.set(0, (d.H || 1.45) + 0.08, -0.15); v.body.add(s); } };
+VEHICLES.micro = { name: 'Microbus', cls: 'Microbus', type: 'car', body: 'van', L: 5.0, W: 1.9, H: 2.1, power: 4.8, top: 36, grip: 0.9, steer: 0.5, mass: 2300, price: 0, colors: ['#f2f2f2', '#e9ecef'],
+  decorate: (v) => { const d = v.m.dims || { H: 2.1 }; band(v, (d.H || 2.1) * 0.42, new THREE.MeshStandardMaterial({ color: 0x1d4e89, roughness: 0.5 }), 0.22); } };
 for (const k in VEHICLES) VEHICLES[k].key = k;
 export const DEALER_STOCK = ['pico', 'meridian', 'ion', 'atlas', 'haulmark', 'dune', 'brawler', 'strada', 'valence', 'kestrel', 'zipp', 'bicycle', 'ridgeback', 'vortex'];
 export const TRAFFIC_MIX = {
@@ -35,5 +43,6 @@ export const TRAFFIC_MIX = {
   industrial: ['cargomax', 'cargomax', 'haulmark', 'courier', 'atlas', 'meridian'],
   boardwalk: ['strada', 'vortex', 'ion', 'cab', 'zipp', 'kestrel', 'meridian', 'brawler', 'dune'],
   nightlife: ['strada', 'cab', 'cab', 'valence', 'brawler', 'kestrel', 'ion'],
+  nour: ['ecab', 'ecab', 'ecab', 'micro', 'micro', 'pico', 'meridian', 'zipp', 'kestrel', 'atlas', 'bicycle'],
   default: ['meridian', 'pico', 'atlas', 'cab', 'ion', 'haulmark'],
 };

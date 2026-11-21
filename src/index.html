@@ -62,8 +62,8 @@ button { font-family: var(--ui); }
 #bigtext h1 { font-family: var(--display); font-weight: 900; font-size: clamp(48px, 10vw, 120px); margin: 0; letter-spacing: .04em; text-shadow: 0 6px 30px rgba(0,0,0,.6); }
 #bigtext p { margin: 6px 0 0; font-weight: 600; font-size: 18px; color: var(--text); text-shadow: 0 2px 6px #000; }
 /* ---------- panels / menus ---------- */
-.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: calc(16px + var(--safe-t)) max(16px, var(--safe-r)) calc(16px + var(--safe-b)) max(16px, var(--safe-l)); background: rgba(5, 10, 14, 0.7); pointer-events: auto; z-index: 20; }
-.panel { width: min(760px, 100%); max-height: 100%; overflow: auto; background: linear-gradient(180deg, rgba(20,32,40,.96), rgba(12,20,26,.97)); border: 1px solid var(--line); border-radius: 18px; padding: 22px; box-shadow: 0 30px 80px rgba(0,0,0,.5); -webkit-user-select: text; user-select: text; touch-action: pan-y; }
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: calc(16px + var(--safe-t)) max(16px, var(--safe-r)) calc(16px + var(--safe-b)) max(16px, var(--safe-l)); background: radial-gradient(ellipse at center, rgba(5,10,14,.18), rgba(5,10,14,.42)); pointer-events: auto; z-index: 20; }
+.panel { width: min(760px, 100%); max-height: 100%; overflow: auto; background: linear-gradient(180deg, rgba(18,30,38,.80), rgba(10,18,24,.84)); -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1); position: relative; border: 1px solid var(--line); border-radius: 18px; padding: 22px; box-shadow: 0 30px 80px rgba(0,0,0,.5); -webkit-user-select: text; user-select: text; touch-action: pan-y; }
 .panel h2 { font-family: var(--display); font-weight: 900; font-size: 34px; letter-spacing: .04em; margin: 0 0 4px; text-transform: uppercase; }
 .panel h3 { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: .05em; margin: 18px 0 8px; text-transform: uppercase; color: var(--sun-2); }
 .panel p { color: var(--muted); line-height: 1.5; margin: 6px 0; max-width: 65ch; }
@@ -159,6 +159,60 @@ body.touch * { -webkit-backdrop-filter: none !important; backdrop-filter: none !
 #rotate { position: absolute; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; text-align: center; padding: 24px; background: #0b0f12; font-weight: 600; }
 @media (orientation: portrait) and (pointer: coarse) { body.playing #rotate { display: flex; } }
 #err { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 99; padding: 12px; border-radius: 12px; background: #3a0d12; color: #ffd7dc; font: 12px ui-monospace, monospace; white-space: pre-wrap; display: none; -webkit-user-select: text; user-select: text; }
+
+/* menus keep the world visible: one translucent panel at a time, close button, title menu hidden while a panel is open */
+.panel .xclose { position: absolute; top: 10px; inset-inline-end: 10px; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.06); color: #fff; font-size: 16px; cursor: pointer; z-index: 2; }
+.panel .xclose:hover { background: rgba(255,255,255,.16); }
+body.panel-open #title { opacity: 0; pointer-events: none; transition: opacity .15s; }
+body.panel-open #title { background: none !important; }
+body.touch .panel { background: linear-gradient(180deg, rgba(18,30,38,.9), rgba(10,18,24,.92)); }
+
+/* Arabic: right-to-left layout, Arabic font, no letter-spacing (it breaks joined letters) */
+body.rtl { --display: "Cairo", "Big Shoulders Display", "Segoe UI", Tahoma, sans-serif; --ui: "Cairo", "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif; }
+body.rtl, body.rtl * { letter-spacing: 0 !important; }
+body.rtl .panel h2, body.rtl .panel h3, body.rtl #objective b, body.rtl .btn { text-transform: none; }
+body.rtl #title .logo { font-family: "Big Shoulders Display", "Arial Narrow", sans-serif; }
+body.rtl #money small { text-align: left; }
+body.rtl .panel p { max-width: none; }
+body.rtl #objective b { margin-right: 0; margin-left: 6px; }
+
+/* conversation panel: docked at the bottom so the street and the person stay visible */
+.dlg-ov { align-items: flex-end !important; background: linear-gradient(0deg, rgba(5,10,14,.45), rgba(5,10,14,0) 45%) !important; }
+.dlg-ov .panel { width: min(780px, 97vw); margin-bottom: calc(8px + var(--safe-b)); padding: 16px 18px; }
+.dlg-head { font-size: 15px; color: var(--muted); margin-inline-end: 40px; } .dlg-head b { color: var(--sun-2); font-size: 18px; font-family: var(--display); }
+.dlg-line { font-size: calc(20px * var(--fs)); font-weight: 600; line-height: 1.45; margin: 8px 0 2px; min-height: 1.4em; }
+.dlg-tr { color: var(--muted); font-size: 14px; min-height: 1.1em; margin-bottom: 8px; }
+.dlg-opts { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; } .dlg-opts .btn.sel { outline: 2px solid var(--sun-2); }
+.dlg-in { display: flex; gap: 6px; align-items: center; } .dlg-in input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.35); color: #fff; font: inherit; user-select: text; -webkit-user-select: text; }
+.dlg-mic.rec { background: #d62839 !important; color: #fff; animation: micpulse 1s infinite; }
+@keyframes micpulse { 50% { box-shadow: 0 0 0 6px rgba(214,40,57,.35); } }
+.dlg-note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+/* weapons HUD */
+#weaponHud { position: absolute; right: calc(18px + var(--safe-r)); bottom: calc(150px + var(--safe-b)); text-align: right; font-family: var(--display); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.6); pointer-events: none; }
+#weaponHud .wa { direction: ltr; unicode-bidi: isolate; } #weaponHud .wn { font-weight: 800; font-size: 18px; letter-spacing: .04em; } #weaponHud .wa { font-weight: 900; font-size: 28px; }
+#weaponHud .ar { width: 120px; height: 6px; background: rgba(255,255,255,.18); border-radius: 4px; margin-top: 6px; margin-inline-start: auto; overflow: hidden; } #weaponHud .ar i { display: block; height: 100%; background: #4cc9f0; }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; pointer-events: none; border-radius: 50%; border: 2px solid rgba(255,255,255,.75); box-shadow: 0 0 0 1px rgba(0,0,0,.4); transition: transform .12s; }
+#crosshair::after { content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px; background: #fff; border-radius: 50%; }
+#crosshair.aim { transform: scale(.6); border-color: #ffd166; }
+body.rtl #weaponHud { text-align: left; right: auto; left: calc(18px + var(--safe-l)); bottom: calc(200px + var(--safe-b)); }
+.wbtn { position: absolute; z-index: 6; width: 54px; height: 54px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); background: rgba(10,18,24,.5); color: #fff; font-size: 20px; font-weight: 800; }
+/* weapon buttons in a column just left of the touch grid (grid spans right 16-222 px), one per grid row */
+.w-aim { right: calc(234px + var(--safe-r)); bottom: calc(92px + var(--safe-b)); } .w-sw { right: calc(234px + var(--safe-r)); bottom: calc(164px + var(--safe-b)); } .w-rl { right: calc(234px + var(--safe-r)); bottom: calc(20px + var(--safe-b)); }
+body.touch:not(.rtl) #weaponHud { right: calc(234px + var(--safe-r)); bottom: calc(230px + var(--safe-b)); }
+
+.msum { position: absolute; top: calc(90px + var(--safe-t)); inset-inline-end: calc(18px + var(--safe-r)); width: min(320px, 80vw); background: rgba(10,18,24,.78); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; color: #fff; z-index: 8; transition: opacity .5s, transform .5s; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.msum.out { opacity: 0; transform: translateY(-10px); } .ms-h { font-family: var(--display); font-weight: 900; font-size: 22px; color: #ffd166; } .ms-t { color: var(--muted); margin: 2px 0 6px; } .ms-m { font-size: 20px; } .ms-r { font-weight: 800; margin: 4px 0; } .ms-o { margin: 6px 0 0; padding-inline-start: 18px; font-size: 14px; } .ms-o .ok { color: #7bf1a8; } .ms-o .no { color: #ff8b94; }
+
+#photoUI { position: absolute; inset: 0; pointer-events: none; z-index: 30; }
+#photoUI .ph-top { position: absolute; top: calc(14px + var(--safe-t)); left: 50%; transform: translateX(-50%); font-family: var(--display); font-weight: 800; font-size: 20px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
+#photoUI .ph-help { position: absolute; top: calc(44px + var(--safe-t)); left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.85); font-size: 13px; text-align: center; width: min(760px, 94vw); text-shadow: 0 1px 4px rgba(0,0,0,.7); }
+#photoUI .ph-bar { position: absolute; bottom: calc(18px + var(--safe-b)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; flex-wrap: wrap; justify-content: center; }
+#photoUI .ph-bar .btn { background: rgba(10,18,24,.6); } #photoUI .ph-bar .btn.primary { background: var(--sun); color: #1a0d06; }
+#photoUI::before { content: ''; position: absolute; inset: 7%; border: 1px solid rgba(255,255,255,.25); pointer-events: none; }
+.w-photo { right: calc(170px + var(--safe-r)); top: calc(70px + var(--safe-t)); width: 46px; height: 46px; font-size: 18px; }
+
+#phone .qr { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; } #phone .ptext { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.3); color: #fff; font: inherit; user-select: text; -webkit-user-select: text; }
 </style>
 <div id="app">
   <div id="view"></div>

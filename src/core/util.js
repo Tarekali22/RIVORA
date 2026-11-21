@@ -52,6 +52,9 @@ export class Bus {
   constructor() { this.m = new Map(); }
   on(e, f) { if (!this.m.has(e)) this.m.set(e, new Set()); this.m.get(e).add(f); return () => this.m.get(e).delete(f); }
   emit(e, ...a) { const s = this.m.get(e); if (s) for (const f of [...s]) { try { f(...a); } catch (err) { console.error('[bus]', e, err); } } }
+  // first handler returning true wins (used by add-on systems to claim an interaction)
+  onHandle(e, f) { return this.on('?' + e, f); }
+  handle(e, ...a) { const s = this.m.get('?' + e); if (s) for (const f of [...s]) { try { if (f(...a)) return true; } catch (err) { console.error('[bus]', e, err); } } return false; }
 }
 export const bus = new Bus();
 

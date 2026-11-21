@@ -1,6 +1,7 @@
 // RIVORA — game bootstrap, main loop and cross-system glue.
 import { clamp, lerp, R, bus, dist2, fmtTime, isTouch, fmtMoney } from './core/util.js';
-import { Input } from './core/input.js';
+import { Input, DEFAULT_BINDINGS } from './core/input.js';
+import { setLang, initialLang, T, isAR } from './core/i18n.js';
 import { AudioEngine } from './core/audio.js';
 import { CameraRig } from './core/camera.js';
 import { SaveSystem } from './core/save.js';
@@ -21,6 +22,10 @@ import { Police } from './systems/police.js';
 import { FX } from './systems/fx.js';
 import { Economy } from './systems/economy.js';
 import { Missions } from './systems/missions.js';
+import { Dialogue } from './systems/dialogue.js';
+import { Weapons } from './systems/weapons.js';
+import { NourLife } from './systems/nour_life.js';
+import { PhotoMode } from './systems/photo.js';
 import { Activities } from './systems/activities.js';
 import { UI } from './ui/ui.js';
 import { Phone } from './ui/phone.js';
@@ -47,6 +52,7 @@ class Game {
     this.signal = (n, t, axis) => (this._forceRed === n.id && axis === 'ns' ? 'red' : L.signalState(n, t, axis));
   }
   async boot() {
+    setLang(this.settings.lang || initialLang()); this.settings.lang = isAR() ? 'ar' : 'en';
     const bar = document.querySelector('#loading .bar i'), msg = document.querySelector('#loading .msg');
     const step = async (p, m) => { bar.style.width = p + '%'; msg.textContent = m; await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))); };
     await step(5, 'Starting renderer…');
@@ -79,6 +85,11 @@ class Game {
     await step(75, 'Furnishing interiors…');
     this.interiors = new Interiors(this);
     this.missions = new Missions(this);
+    this.dialogue = new Dialogue(this);
+    this.weapons = new Weapons(this);
+    this.nour = new NourLife(this);
+    this.photo = new PhotoMode(this);
+    for (const f of (window.RIVORA_ADDONS || [])) try { f(this); } catch (e) { console.error('[addon]', e); }
     await step(88, 'Compiling shaders…');
     this.player.object.visible = false;
     this.renderer.compile(this.scene, this.camera);
@@ -107,8 +118,8 @@ class Game {
   }
   // ---------------- settings ----------------
   _loadSettings() { try { const s = JSON.parse(localStorage.getItem('rivora.settings') || 'null'); if (s) Object.assign(this.settings, s.settings || {}), this._savedCtl = s; } catch (e) {} }
-  _applySavedControls() { const s = this._savedCtl; if (!s) return; if (s.bindings) this.input.bindings = Object.assign(this.input.bindings, s.bindings); if (s.levels) Object.assign(this.audio.levels, s.levels); if (s.sens) this.input.sens = s.sens; if (s.invertY != null) this.input.invertY = s.invertY; if (s.touchSens) this.input.touchSens = s.touchSens; document.documentElement.style.setProperty('--fs', this.settings.textSize || 1); }
-  saveSettings() { try { localStorage.setItem('rivora.settings', JSON.stringify({ settings: this.settings, bindings: this.input.bindings, levels: this.audio.levels, sens: this.input.sens, invertY: this.input.invertY, touchSens: this.input.touchSens })); } catch (e) {} }
+  _applySavedControls() { const s = this._savedCtl; if (!s) return; if (s.bindings) { this.input.bindings = Object.assign(this.input.bindings, s.bindings); if ((s.ctlVer || 1) < 2) { const B = this.input.bindings, D = DEFAULT_BINDINGS; for (const k of ['interact', 'crouch', 'camera', 'phone', 'punch', 'block']) B[k] = D[k].slice(); } } if (s.levels) Object.assign(this.audio.levels, s.levels); if (s.sens) this.input.sens = s.sens; if (s.invertY != null) this.input.invertY = s.invertY; if (s.touchSens) this.input.touchSens = s.touchSens; document.documentElement.style.setProperty('--fs', this.settings.textSize || 1); }
+  saveSettings() { try { localStorage.setItem('rivora.settings', JSON.stringify({ ctlVer: 2, settings: this.settings, bindings: this.input.bindings, levels: this.audio.levels, sens: this.input.sens, invertY: this.input.invertY, touchSens: this.input.touchSens })); } catch (e) {} }
   applyQuality(q) { Object.assign(this.quality, QUALITY[q]); this.traffic.max = this.quality.traffic; this.npcs.max = this.quality.npcs; this.env.fogFar = this.quality.drawDistance; this.applyShadows(); this.resize(); }
   applyShadows() { const on = this.quality.shadows && this.settings.shadows; this.renderer.shadowMap.enabled = on; this.env.sun.castShadow = on; this.scene.traverse((o) => { if (o.material) { const m = Array.isArray(o.material) ? o.material : [o.material]; m.forEach((x) => x.needsUpdate = true); } }); }
   resize() { const w = window.innerWidth, h = window.innerHeight; const dpr = Math.min(window.devicePixelRatio || 1, this.quality.dpr) * (this.settings.renderScale || 1); this.renderer.setPixelRatio(dpr); this.renderer.setSize(w, h); this.camera.aspect = w / Math.max(1, h); this.camera.updateProjectionMatrix(); this._sizeComposer && this._sizeComposer(); }
@@ -131,6 +142,7 @@ class Game {
   }
   newGame(c) {
     const G = this; this.companion.setKind(c.kind, c.name, c.color); this.contacts = new Set(['dani']); this.relations = {};
+    if (this.weapons) this.weapons.restore({ cur: 'fists', inv: { pistol: { clip: 12, ammo: 36, ext: false, grip: false } } }); this.player.armor = 0; if (this.nour) this.nour.restore({});
     this.economy = new Economy(this); this.ownedOutfits = new Set(['striped']);
     const rec = this.vehicles.addOwned('ridgeback', '#b8bec4'); this.vehicles.spawnOwned(rec, -184, 244.9, Math.PI / 2);
     this.env.setHour(17.4); this.env.setWeather('clear', true); this.env.autoWeather = true; this.env.weatherTimer = 900;
@@ -153,14 +165,14 @@ class Game {
     this.autosave('start');
   }
   async _tutorial() {
-    const tips = this.touch ? ['Left side: move. Right side: look around. Buttons change with what you are doing.', 'Your pickup is parked by the curb — walk up and tap ENTER.', 'Tap PHONE (top right) for messages and jobs.'] : ['Click the view to control the camera with the mouse. WASD to move, Shift to sprint, Space to jump.', 'Your electric pickup is parked at the curb — press F next to it to get in.', 'Press P for your phone, M for the map, Esc for the menu.'];
+    const tips = this.touch ? ['Left side: move. Right side: look around. Buttons change with what you are doing.', 'Your pickup is parked by the curb — walk up and tap ENTER.', 'Tap PHONE (top right) for messages and jobs.'] : ['Click the view to control the camera with the mouse. WASD to move, Shift to sprint, Space to jump.', 'Your electric pickup is parked at the curb — walk up to it and press Enter to get in.', 'Press Tab for your phone, M for the map, Esc for the menu. Enter interacts with whatever is in front of you.'];
     for (const t of tips) { if (!this.running) return; this.ui.toast('How to play', t, 'info', 7); await new Promise((r) => setTimeout(r, 7500)); }
   }
   startFromSave(d) {
     try {
       document.getElementById('title') && document.getElementById('title').remove();
       this.cam.cine = null; this.creatorMode(false);
-      this.player.restore(d.player); this.economy.restore(d.economy); this.env.restore(d.env); this.missions.restore(d.missions); this.phone.restore(d.phone);
+      this.player.restore(d.player); this.economy.restore(d.economy); this.env.restore(d.env); this.missions.restore(d.missions); this.phone.restore(d.phone); if (this.weapons) this.weapons.restore(d.weapons); if (this.nour && d.nour) this.nour.restore(d.nour);
       if (d.companion) { this.companion.setKind(d.companion.kind, d.companion.name, d.companion.color); this.companion.mode = d.companion.mode || 'follow'; }
       this.ownedOutfits = new Set(d.outfits || ['striped']); this.contacts = new Set(d.contacts || ['dani']); this.relations = d.relations || {}; this.gymToday = d.gymToday || 0;
       if (d.settings) Object.assign(this.settings, d.settings); if (d.levels) Object.assign(this.audio.levels, d.levels); this.audio.applyLevels();
@@ -221,7 +233,7 @@ class Game {
         if (v.driver === 'player') { this.crime('hit-and-run', n.pos, sp > 12 ? 2 : 1); this.npcs.danger(n.pos, 20, 2); }
         if (!v.kinematic) v.vel.multiplyScalar(0.92);
       }
-      if ((P.state === 'foot' || P.state === 'activity') && v.driver !== 'player' && test(P.pos, 0.35) && P.invuln <= 0) { P.damage(sp * 3, null, { knock: true, fall: true }); this.audio.impact(P.pos, 0.4); P.invuln = 1; }
+      if ((P.state === 'foot' || P.state === 'activity') && v.driver !== 'player' && test(P.pos, 0.35) && P.invuln <= 0) { P.damage(sp * 3 * clamp(((v.spec && v.spec.mass) || 1500) / 1500, 0.15, 2.2), null, { knock: sp > 3.5, fall: true, lethal: sp > 26 }); this.audio.impact(P.pos, 0.4); P.invuln = 1; }
     }
   }
   deliverOwned(rec) {
@@ -231,11 +243,21 @@ class Game {
     const e = ne.edge, A = L.nodes[e.a]; const t = clamp(ne.t + 12, 8, e.len - 8); const x = A.x + e.dx * t - e.dz * 4.9, z = A.z + e.dz * t + e.dx * 4.9;
     const v = this.vehicles.spawnOwned(rec, x, z, Math.atan2(e.dx, e.dz)); this.ui.waypoint = { x, z }; this.ui.toast('Delivered', `${v.spec.name} is parked nearby.`, 'good'); return true;
   }
-  speak(text, sex, who) {
-    if (!this.settings.tts || !window.speechSynthesis || !this.audio.ctx) return;
+  // Spoken lines through the browser's own voices. Arabic lines use an Arabic voice (Egyptian preferred) when the device has one.
+  // Every character keeps the same voice: the choice is hashed from their name.
+  speak(text, sex, who, o = {}) {
+    if (!this.settings.tts || !window.speechSynthesis || !this.audio.ctx || this.audio.muted) return;
     try {
-      const u = new SpeechSynthesisUtterance(text); const vs = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)); if (vs.length) u.voice = vs[(who ? who.length : 0) % vs.length];
-      u.pitch = sex === 'f' ? 1.15 : who === 'Mr. Vale' ? 0.75 : 0.95; u.rate = 1.02; u.volume = clamp(this.audio.levels.voices * this.audio.levels.master * 1.1, 0, 1) * (this.audio.muted ? 0 : 1);
+      const ar = o.lang ? o.lang === 'ar' : isAR(); const line = o.raw ? text : T(text);
+      if (!line || (ar && !/[\u0600-\u06FF]/.test(line) && !o.lang)) { if (ar) return; }
+      const all = speechSynthesis.getVoices(); const lang = ar ? /^ar/i : /^en/i;
+      let vs = all.filter((v) => lang.test(v.lang)); if (ar) { const eg = vs.filter((v) => /EG/i.test(v.lang)); if (eg.length) vs = eg; }
+      let h = 7; const key = (who || '') + (sex || ''); for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0; h = Math.abs(h);
+      const u = new SpeechSynthesisUtterance(line); u.lang = ar ? (vs[0] ? vs[0].lang : 'ar-EG') : 'en-US';
+      if (vs.length) { const fem = vs.filter((v) => /female|woman|zira|hoda|salma|laila|samantha|victoria|karen|moira|tessa|amira|zeina/i.test(v.name)), mal = vs.filter((v) => /male|man|naayf|maged|tarik|hamed|david|daniel|alex|fred|shakir/i.test(v.name) && !/female/i.test(v.name)); const pool = sex === 'f' && fem.length ? fem : sex !== 'f' && mal.length ? mal : vs; u.voice = pool[h % pool.length]; }
+      u.pitch = (sex === 'f' ? 1.12 : who === 'Mr. Vale' ? 0.75 : 0.94) * (0.94 + (h % 13) / 100); u.rate = (ar ? 0.98 : 1.02) * (0.96 + (h % 7) / 100);
+      u.volume = clamp((o.phone ? (this.audio.levels.phone ?? 0.6) : this.audio.levels.voices) * this.audio.levels.master * 1.1, 0, 1);
+      if (o.onend) u.onend = o.onend;
       speechSynthesis.cancel(); speechSynthesis.speak(u);
     } catch (e) {}
   }
@@ -274,32 +296,59 @@ class Game {
   }
   _sizeComposer() { if (!this.composer) return; const r = this.renderer, w = window.innerWidth, h = window.innerHeight; this.composer.setPixelRatio(r.getPixelRatio()); this.composer.setSize(w, h); }
   // ---------------- interaction prompts ----------------
+  _keyName(action) { const c = (this.input.bindings[action] || [])[0] || ''; return c === 'Enter' || c === 'NumpadEnter' ? 'Enter' : c.startsWith('Key') ? c.slice(3) : c.startsWith('Digit') ? c.slice(5) : c.replace('Left', '').replace('Mouse0', 'LMB').replace('Mouse2', 'RMB'); }
+  _vehVerb(v) {
+    if (v.display) return 'Showroom display';
+    if (v.roofHeli && !v.rented) return `Rent helicopter (${fmtMoney(v.rentPrice)})`;
+    const own = v.owner === 'player', n = v.spec.name;
+    if (v.owner === 'parked' && !own) return (v.type === 'bike' ? 'Steal motorcycle · ' : 'Steal vehicle · ') + n;
+    if (v.traffic) return 'Carjack · ' + n;
+    const verb = v.type === 'bike' ? (v.spec.body === 'bicycle' ? 'Ride bicycle' : v.spec.body === 'scooter' ? 'Ride scooter' : 'Ride motorcycle') : v.type === 'boat' ? 'Board boat' : v.type === 'heli' ? 'Enter helicopter' : v.type === 'plane' ? 'Board aircraft' : 'Enter vehicle';
+    return verb + ' · ' + n;
+  }
+  // One contextual action at a time (Enter / E). Priority: mission targets > the nearest thing the player faces.
   _interactions() {
     const P = this.player, I = this.input; if (this.cutscene || this.ui.blockingUI) { this.ui.prompt(); return; }
-    if (P.state !== 'foot') { this.ui.prompt(); if (P.state === 'vehicle') { if (I.pressed('vehicle') || (I.pressed('interact') && P.vehicle.speed < 1)) this.vehicles.exit(); } return; }
-    let best = null, bd = 1e9; const cand = [];
+    const K = this._keyName('interact');
+    if (P.state !== 'foot') {
+      this.ui.prompt();
+      if (P.state === 'vehicle') {
+        const sp = Math.abs(P.vehicle.speed || 0);
+        if (I.pressed('vehicle')) this.vehicles.exit();
+        else if (I.pressed('interact')) { if (sp < 2.5 || P.vehicle.type === 'heli' || P.vehicle.type === 'plane') this.vehicles.exit(); else this.ui.hint('Slow down to step out safely — or press ' + this._keyName('vehicle') + ' to bail out', 2); }
+      }
+      return;
+    }
+    const cand = [];
     if (this.interior) for (const p of this.interiors.pointsForCurrent()) cand.push({ ...p, src: 'room' });
     else for (const p of this.city.interactPoints) { if (Math.abs(P.pos.y - (p.y || 0)) > 2.5) continue; cand.push({ ...p, src: 'city' }); }
-    for (const t of this.interactTargets) cand.push({ x: t.x, z: t.z, r: t.r, label: t.label, src: 'target', t });
-    for (const c of cand) { const d = Math.hypot(c.x - P.pos.x, c.z - P.pos.z); if (d < (c.r || 2) && d < bd) { bd = d; best = c; } }
-    // companion & pedestrians
-    const C = this.companion; if (!best && C.root.visible && Math.hypot(C.pos.x - P.pos.x, C.pos.z - P.pos.z) < 1.8) best = { label: 'Pet ' + C.name, src: 'pet' };
+    for (const t of this.interactTargets) cand.push({ x: t.x, z: t.z, r: t.r, label: t.label, src: 'target', t, prio: 1 });
+    const hx = Math.sin(P.heading), hz = Math.cos(P.heading);
+    const score = (x, z, d) => { const l = Math.max(0.001, d), f = ((x - P.pos.x) * hx + (z - P.pos.z) * hz) / l; return d * (1.35 - 0.35 * f); };
+    let best = null, bs = 1e9;
+    for (const c of cand) { const d = Math.hypot(c.x - P.pos.x, c.z - P.pos.z); if (d < (c.r || 2)) { const sc = score(c.x, c.z, d) - (c.prio ? 100 : 0); if (sc < bs) { bs = sc; best = c; } } }
+    const C = this.companion; if (C.root.visible && !C.inVehicle) { const d = Math.hypot(C.pos.x - P.pos.x, C.pos.z - P.pos.z); if (d < 1.8) { const sc = score(C.pos.x, C.pos.z, d) + 0.6; if (sc < bs) { bs = sc; best = { label: 'Pet ' + C.name, src: 'pet' }; } } }
     const veh = !this.interior ? this.vehicles.nearestEnterable(P.pos, 3.2) : null;
-    let npc = null; if (!best && !this.interior) { let nd = 2.2; for (const n of this.npcs.list) { if (!n.active || n.down || n.state === 'fight' || n.role === 'police' || n.fixed === 'staff') continue; const d = Math.hypot(n.pos.x - P.pos.x, n.pos.z - P.pos.z); if (d < nd) { nd = d; npc = n; } } if (npc) best = { label: 'Talk to ' + (npc.name || 'stranger'), src: 'npc' }; }
-    if (best) this.ui.prompt('E', best.label + (veh ? ' · F enter vehicle' : ''));
-    else if (veh) this.ui.prompt('F', veh.display ? 'Showroom display' : veh.roofHeli ? `Rent helicopter (${fmtMoney(veh.rentPrice)})` : (veh.owner === 'parked' ? 'Steal ' : veh.traffic ? 'Carjack ' : veh.owner === 'player' ? 'Drive ' : 'Enter ') + veh.spec.name);
+    if (veh) { const dw = veh.doorWorld ? veh.doorWorld(1) : veh.pos; const d = Math.min(Math.hypot(veh.pos.x - P.pos.x, veh.pos.z - P.pos.z) * 0.8, Math.hypot(dw.x - P.pos.x, dw.z - P.pos.z)); const sc = score(veh.pos.x, veh.pos.z, d); if (sc < bs) { bs = sc; best = { label: this._vehVerb(veh), src: 'veh', v: veh }; } }
+    if (!this.interior) { let nd = 2.4, npc = null; for (const n of this.npcs.list) { if (!n.active || n.down || n.state === 'fight' || n.role === 'police' || n.fixed === 'staff') continue; const d = Math.hypot(n.pos.x - P.pos.x, n.pos.z - P.pos.z); if (d < nd) { nd = d; npc = n; } }
+      if (npc) { const sc = score(npc.pos.x, npc.pos.z, nd) + 0.2; if (sc < bs) { bs = sc; best = { label: 'Talk to ' + (npc.name || 'stranger'), src: 'npc', npc }; } } }
+    this.ctxTarget = best;
+    if (best) this.ui.prompt(K, best.label + (veh && best.src !== 'veh' ? ' · ' + this._keyName('vehicle') + ': vehicle' : ''));
     else this.ui.prompt();
-    if (I.pressed('interact') && best) {
-      I.consume('interact');
-      if (best.src === 'room') this.interiors.act(best);
-      else if (best.src === 'city') { if (best.kind.startsWith('gym:')) this.activities.startGym(best.kind.slice(4), best); else this.interiors.door(best); }
-      else if (best.src === 'target') best.t.act();
-      else if (best.src === 'pet') { P.action = { name: 'pet', t: 0, dur: 2, p: 0, hitAt: 9, lock: true }; C.pet(); bus.emit('petCompanion'); }
-      else if (best.src === 'npc') this.npcs.talkTo(npc);
-    } else if ((I.pressed('vehicle') || (I.pressed('interact') && !best)) && veh) {
-      if (veh.display) { this.ui.toast('Aurelia Motors', 'Display models are not for test drives. Buy one inside.', 'info'); return; }
-      if (veh.roofHeli && !veh.rented) { this.ui.confirm('Meridian Charter', `Rent this helicopter for ${fmtMoney(veh.rentPrice)}? Fly anywhere, land anywhere.`, 'Rent', 'Cancel').then((ok) => { if (ok && this.economy.pay(veh.rentPrice, 'Helicopter rental')) { veh.rented = true; veh.owner = 'player'; this.vehicles.enter(veh); } }); return; }
-      this.vehicles.enter(veh);
+    const go = best && I.pressed('interact'), vgo = I.pressed('vehicle') && veh;
+    if (!go && !vgo) return;
+    I.consume('interact');
+    const act = vgo && (!go || best.src !== 'veh') && !go ? { src: 'veh', v: veh } : best;
+    if (act.src === 'room') this.interiors.act(act);
+    else if (act.src === 'city') { if (act.kind.startsWith('gym:')) this.activities.startGym(act.kind.slice(4), act); else if (bus.handle && bus.handle('door', act)) {} else this.interiors.door(act); }
+    else if (act.src === 'target') act.t.act();
+    else if (act.src === 'pet') { P.action = { name: 'pet', t: 0, dur: 2, p: 0, hitAt: 9, lock: true }; C.pet(); bus.emit('petCompanion'); }
+    else if (act.src === 'npc') { if (this.dialogue) this.dialogue.open(act.npc); else this.npcs.talkTo(act.npc); }
+    else if (act.src === 'veh') {
+      const v = act.v;
+      if (v.display) { this.ui.toast('Aurelia Motors', 'Display models are not for test drives. Buy one inside.', 'info'); return; }
+      if (v.roofHeli && !v.rented) { this.ui.confirm('Meridian Charter', `Rent this helicopter for ${fmtMoney(v.rentPrice)}? Fly anywhere, land anywhere.`, 'Rent', 'Cancel').then((ok) => { if (ok && this.economy.pay(v.rentPrice, 'Helicopter rental')) { v.rented = true; v.owner = 'player'; this.vehicles.enter(v); } }); return; }
+      this.vehicles.enter(v);
     }
   }
   // ---------------- main loop ----------------
@@ -309,11 +358,12 @@ class Game {
     const I = this.input; I.poll();
     if (this.running && !this.cutscene) this._hotkeys();
     if (this.combat.hitStop > 0) dt *= 0.25;
-    const sim = !this.paused;
+    const sim = !this.paused && !this.photoMode;
     if (sim) {
       let rem = dt; while (rem > 1e-4) { const h = Math.min(rem, 1 / 45); this.step(h); rem -= h; }
     } else if (!this.running) this.step(dt);
-    if (this.running) this._interactions();
+    else if (this.photoMode && this.photo) this.photo.update(dt);
+    if (this.running && !this.photoMode) this._interactions();
     if (this.paused && ((this._pf = (this._pf || 0) + 1) % 4)) return; // save power while paused
     this._render();
     if (this.settings.showFps) this.ui.hint(`${this.fps.toFixed(0)} FPS · ${this.renderer.info.render.calls} draws`, 1.2);
@@ -330,7 +380,7 @@ class Game {
     } else if (P.object.visible) P.update(dt, I, this.cam.yaw);
     this.vehicles.update(dt, I);
     this.traffic.update(dt); this.npcs.update(dt); this.companion.update(dt);
-    this.combat.update(dt); this.police.update(dt); this.missions.update(dt); this.interiors.update(dt); this.fx.update(dt);
+    this.combat.update(dt); this.police.update(dt); this.missions.update(dt); this.dialogue.update(dt); bus.emit('tick', dt); this.interiors.update(dt); this.fx.update(dt);
     this._vehicleHits(dt);
     if (this.running && !this.ui.blockingUI) this.cam.update(dt, I); else if (this.cam.cine) this.cam.update(dt, I);
     this.audio.setListener(this.camera);
@@ -352,6 +402,8 @@ class Game {
   }
   _hotkeys() {
     const I = this.input, P = this.player;
+    if (this.photoMode && this.photo) { if (I.pressed('pause') || I.pressed('photo')) this.photo.exit(); else if (I.pressed('interact') || I.pressed('jump') || I.pressed('punch')) this.photo.capture(); return; }
+    if (I.pressed('photo') && this.photo && !this.ui.panelStack.length && !this.ui.mapOpen) { this.photo.enter(); return; }
     if (I.pressed('pause')) { if (this.ui.panelStack.length) this.ui.close(); else if (this.ui.mapOpen) this.ui.closeMap(); else if (this.phone.open) this.phone.close(); else this.menus.pause(); return; }
     if (this.ui.panelStack.length) return;
     if (I.pressed('map')) { this.phone.open && this.phone.close(); this.ui.openMap(); }

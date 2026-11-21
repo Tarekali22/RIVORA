@@ -12,7 +12,7 @@ export class Player {
     this.pos = this.object.position; this.vel = new THREE.Vector3(); this.heading = Math.PI;
     this.state = 'foot'; this.grounded = true; this.speed = 0; this.landT = 0; this.airT = 0;
     this.stats = { strength: 10, stamina: 10, endurance: 10, recovery: 10 };
-    this.health = 100; this.stamina = 100; this.exert = 0;
+    this.health = 100; this.stamina = 100; this.exert = 0; this.armor = 0; this.staggerT = 0; this.crouchOn = false;
     this.action = null; this.combo = 0; this.comboT = 0; this.blocking = false; this.guardT = 0;
     this.item = null; this.itemT = 0; this.vehicle = null; this.activity = null;
     this.downT = 0; this.invuln = 0; this.hurt = 0; this.stepPhase = 0; this.lastStep = 0;
@@ -76,16 +76,20 @@ export class Player {
   _foot(dt, input, camYaw, anim) {
     const G = this.game, city = G.city;
     const dir = this._moveDir(input, camYaw);
-    this.crouch = input.down('crouch') && this.grounded;
+    if (input.pressed('crouch')) this.crouchOn = !this.crouchOn; // tap to toggle (holding Ctrl+W would close the browser tab)
+    if (input.pressed('jump') || (input.down('sprint') && this.crouchOn && dir)) this.crouchOn = false;
+    this.crouch = !!this.crouchOn && this.grounded;
     const wantSprint = input.down('sprint') && dir && !this.crouch && this.stamina > 2 && !this.action;
     let target = 0;
     if (dir) target = this.crouch ? 1.5 : wantSprint ? 7.2 + this.stats.stamina * 0.02 : dir.mag < 0.55 ? 1.6 : 4.3;
     if (this.action || this.blocking) target *= 0.25;
     if (this.landT > 0) { this.landT -= dt; target *= 0.3; }
+    if (this.staggerT > 0) { this.staggerT -= dt; target *= 0.35; }
+    if (this.aiming) target = Math.min(target, this.crouch ? 1.2 : 2.6);
     // stamina
     if (wantSprint && this.speed > 5) { this.stamina = Math.max(0, this.stamina - dt * (14 - this.stats.stamina * 0.06)); this.exert = Math.min(1, this.exert + dt * 0.25); }
     else { this.stamina = Math.min(this.maxStamina, this.stamina + dt * (9 + this.stats.recovery * 0.25)); this.exert = Math.max(0, this.exert - dt * 0.08); }
-    const accel = this.grounded ? 12 : 2.5;
+    const accel = this.grounded ? (target > this.speed + 0.3 ? 7.5 + (this.speed > 3 ? 3 : 0) : 10) : 2.5; // ease in to a run, plant feet to stop
     const hv = { x: this.vel.x, z: this.vel.z };
     const dx = dir ? dir.x * target : 0, dz = dir ? dir.z * target : 0;
     hv.x = damp(hv.x, dx, accel, dt); hv.z = damp(hv.z, dz, accel, dt);
@@ -139,11 +143,12 @@ export class Player {
   }
   _land(v) {
     const G = this.game; this.landHard = v > 9; this.landT = v > 9 ? 0.35 : 0.08;
-    if (v > 13) { const dmg = (v - 13) * 7; this.damage(dmg, null, { fall: true }); G.audio.impact(this.pos, 0.4); }
+    if (v > 13) { const dmg = (v - 13) * 7; this.damage(dmg, null, { fall: true, lethal: v > 24 }); G.audio.impact(this.pos, 0.4); }
     G.audio.footstep(this.surface(), this.pos, clamp(v / 8, 0.4, 1));
   }
   _combatInput(dt, input, anim) {
     const G = this.game;
+    if (this.gunReady) { this.blocking = false; return; } // firearms handle aim/fire
     this.blocking = input.down('block') && this.grounded && !this.action;
     if (this.blocking) { anim.action = { name: 'block', p: 0.5 }; this.blockStart = this.blockStart || G.time; }
     else this.blockStart = 0;
@@ -187,7 +192,12 @@ export class Player {
       }
     }
     const diff = G.settings.difficulty === 'easy' ? 0.6 : G.settings.difficulty === 'hard' ? 1.3 : 1;
-    amount *= diff; this.health -= amount; this.lastHitT = G.time; this.hurt = Math.min(1, this.hurt + amount / 25);
+    amount *= diff;
+    if (this.armor > 0 && !o.fall) { const ab = Math.min(this.armor, amount * 0.7); this.armor -= ab; amount -= ab; } // body armour soaks most of a hit
+    // ordinary impacts never one-shot a healthy player; only extreme events (o.lethal) can
+    if (!o.lethal && this.health > this.maxHealth * 0.5) amount = Math.min(amount, this.maxHealth * (G.settings.difficulty === 'hard' ? 0.55 : 0.42));
+    if (amount >= 10 && !o.knock && this.state === 'foot') { this.staggerT = Math.min(0.5, 0.2 + amount / 80); }
+    this.health -= amount; this.lastHitT = G.time; this.hurt = Math.min(1, this.hurt + amount / 25);
     G.ui.damageFlash(Math.min(1, amount / 30));
     if (amount > 4 && from) G.audio.human('grunt', this.pos, 0.9);
     if (this.health <= 0) { this.health = 0; this.knockDown(true); bus.emit('wasted', o); }
@@ -271,8 +281,8 @@ export class Player {
     const vy = -this.vel.y;
     if (ground < wl - 1.3) { this.state = 'swim'; this.pos.y = wl - 0.25; G.audio.splash(this.pos, 1); this.vel.set(0, 0, 0); bus.emit('landed', { water: true }); return; }
     this.pos.y = ground; this.state = 'foot'; this.grounded = true;
-    if (freefall) { this.damage(this.maxHealth * 2, null, { fall: true }); }
-    else { if (vy > 7.5) this.damage((vy - 7.5) * 6, null, { fall: true }); this.landT = 0.4; this.landHard = true; }
+    if (freefall) { this.damage(this.maxHealth * 2, null, { fall: true, lethal: true }); }
+    else { if (vy > 7.5) this.damage((vy - 7.5) * 6, null, { fall: true, lethal: vy > 22 }); this.landT = 0.4; this.landHard = true; }
     this.vel.set(this.vel.x * 0.2, 0, this.vel.z * 0.2);
     bus.emit('landed', { x: this.pos.x, z: this.pos.z, soft: vy < 6 });
   }
@@ -302,6 +312,6 @@ export class Player {
     if (kind === 'eat' || kind === 'drink') { mesh = new THREE.Mesh(kind === 'drink' ? prim('cyl', 0.035, 0.03, 0.11, 10) : prim('box', 0.1, 0.05, 0.08), new THREE.MeshStandardMaterial({ color: kind === 'drink' ? 0xf4f1ea : 0xd99b4a })); this.h.hold('item', mesh, 'handR', [0, -0.11, 0.03]); }
   }
   dropItem(only) { if (only && this.item !== only) return; this.item = null; this.h.drop('item'); }
-  serialize() { return { a: this.a, stats: this.stats, health: this.health, pos: [this.pos.x, this.pos.y, this.pos.z], heading: this.heading, name: this.name }; }
-  restore(s) { if (!s) return; if (s.a) this.setAppearance(s.a); Object.assign(this.stats, s.stats || {}); this.health = s.health || this.maxHealth; this.name = s.name || this.name; if (s.pos) this.teleport(s.pos[0], s.pos[1], s.pos[2], s.heading); }
+  serialize() { return { a: this.a, stats: this.stats, health: this.health, armor: this.armor, pos: [this.pos.x, this.pos.y, this.pos.z], heading: this.heading, name: this.name }; }
+  restore(s) { if (!s) return; if (s.a) this.setAppearance(s.a); Object.assign(this.stats, s.stats || {}); this.health = s.health || this.maxHealth; this.armor = s.armor || 0; this.name = s.name || this.name; if (s.pos) this.teleport(s.pos[0], s.pos[1], s.pos[2], s.heading); }
 }

@@ -1,0 +1,82 @@
+// Mobile checks for the overhaul UI on the realistic build, in Arabic, on an emulated landscape phone:
+// weapon buttons, hold-to-fire, aim, photo button and photo mode, conversation panel and phone fit the screen.
+import { createRequire } from 'module';
+import { launch, sleep, shotDir } from './harness.mjs';
+const require = createRequire(import.meta.url); const { devices } = require('playwright');
+const URL = process.argv[2] || 'http://localhost:8777/web/index.html?extra=0';
+const results = []; const ok = (n, p, i = '') => { results.push({ n, p: !!p }); console.log((p ? 'PASS ' : 'FAIL ') + n + (i !== '' ? ' — ' + i : '')); };
+const b = await launch();
+const ctx = await b.newContext({ ...devices['Pixel 7 landscape'], deviceScaleFactor: 1 });
+await ctx.addInitScript(() => { try { localStorage.setItem('rivora.lang', 'ar'); } catch (e) {} });
+const page = await ctx.newPage(); page.setDefaultTimeout(150000); const errs = [];
+page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/ERR_FAILED|favicon/.test(m.text())) errs.push(m.text().slice(0, 200)); });
+await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+await page.goto(URL);
+const G = (fn, a) => page.evaluate(fn, a);
+const simWait = async (sec) => { const t0 = await G(() => window.__rivora.time); while ((await G(() => window.__rivora.time)) - t0 < sec) await sleep(80); };
+await page.waitForSelector('#title', { timeout: 300000 });
+ok('Touch device detected, Arabic RTL', await G(() => document.body.classList.contains('touch') && document.documentElement.dir === 'rtl'));
+await G(() => { const g = window.__rivora; g._noBlurPause = true; g.testFast = true; g._skipIntro = true; document.getElementById('title').remove(); g.audio.start(); g.newGame({ kind: 'dog', name: 'Rocket' }); });
+await page.waitForFunction(() => window.__rivora.running && !window.__rivora.cutscene, null, { timeout: 180000 });
+await G(() => { const g = window.__rivora; g.settings.renderScale = 0.5; g.resize(); g.env.setHour(11); g.player.teleport(-214, 0.15, 300, Math.PI); });
+await simWait(1.2);
+const vp = page.viewportSize();
+const layout = () => G(() => { const vis = (e) => e && e.offsetParent !== null && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden';
+  const rect = (e) => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, t: (e.textContent || '').trim().slice(0, 12) }; };
+  const btns = [...document.querySelectorAll('#tbtns button, #ttop button, .wbtn')].filter(vis).map(rect);
+  const hud = ['#mmc', '#money'].map((s) => document.querySelector(s)).filter(vis).map(rect);
+  return { btns, hud }; });
+const inter = (a, c) => a.x < c.x + c.w - 1 && c.x < a.x + a.w - 1 && a.y < c.y + c.h - 1 && c.y < a.y + a.h - 1;
+const check = (L, tag) => {
+  const pairs = []; L.btns.forEach((a, i) => L.btns.forEach((c, j) => { if (j > i && inter(a, c)) pairs.push(a.t + '×' + c.t); }));
+  const cover = L.btns.filter((a) => L.hud.some((h) => inter(a, h))).map((a) => a.t);
+  const off = L.btns.filter((a) => a.x < 0 || a.y < 0 || a.x + a.w > vp.width || a.y + a.h > vp.height).map((a) => a.t);
+  const small = L.btns.filter((a) => a.w < 44 || a.h < 44).map((a) => a.t);
+  ok(`${tag}: no touch buttons overlap (${L.btns.length} buttons)`, pairs.length === 0, pairs.join(', '));
+  ok(`${tag}: buttons keep the minimap and money clear`, cover.length === 0, cover.join(', '));
+  ok(`${tag}: every button on screen and thumb-sized`, off.length === 0 && small.length === 0, `off: ${off.join(',')} small: ${small.join(',')}`);
+};
+check(await layout(), 'On foot');
+const labelsFoot = await G(() => [...document.querySelectorAll('#tbtns button')].map((e) => e.textContent));
+ok('Touch buttons are labelled in Arabic', labelsFoot.some((t) => /[؀-ۿ]/.test(t)) && !labelsFoot.includes('PUNCH'), labelsFoot.join('،'));
+// gun drawn: FIRE replaces PUNCH, weapon buttons appear
+await G(() => window.__rivora.weapons.select('pistol')); await simWait(0.6);
+const L2 = await layout(); check(L2, 'Gun drawn');
+const labelsGun = await G(() => [...document.querySelectorAll('#tbtns button')].map((e) => e.textContent));
+ok('Gun drawn: FIRE button replaces punch, aim/reload/switch shown', labelsGun.includes('إطلاق') && L2.btns.some((x) => x.t === '◎') && L2.btns.some((x) => x.t === 'R'), labelsGun.join('،'));
+await page.screenshot({ path: shotDir + '/m_ar_gun.png' });
+const touchBtn = async (type, sel, text) => G(({ type, sel, text }) => { const el = [...document.querySelectorAll(sel)].find((e) => !text || e.textContent === text); const r = el.getBoundingClientRect(); const t = new Touch({ identifier: 7, target: el, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 }); el.dispatchEvent(new TouchEvent(type, { touches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true })); }, { type, sel, text });
+const c0 = await G(() => window.__rivora.weapons.inv.pistol.clip);
+await touchBtn('touchstart', '#tbtns button', 'إطلاق'); await simWait(0.35); await touchBtn('touchend', '#tbtns button', 'إطلاق'); await simWait(0.2);
+const c1 = await G(() => window.__rivora.weapons.inv.pistol.clip); ok('Touch FIRE shoots the pistol', c1 < c0, `${c0} → ${c1}`);
+await touchBtn('touchstart', '.wbtn', '◎'); await simWait(0.4); const aiming = await G(() => window.__rivora.player.aiming); await touchBtn('touchend', '.wbtn', '◎'); await simWait(0.2);
+ok('Touch ◎ aims down the sights', aiming === true);
+await G(() => window.__rivora.weapons.select('fists')); await simWait(0.4);
+// photo mode from the touch button
+const phB = await G(() => { const b = document.querySelector('.w-photo'); return !!b && b.offsetParent !== null; }); ok('Photo button visible on touch', phB);
+await touchBtn('touchstart', '.w-photo'); await sleep(700); ok('Photo button opens photo mode', await G(() => window.__rivora.photoMode === true));
+const bar = await G(() => { const r = document.querySelector('#photoUI .ph-bar').getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+ok('Photo mode controls fit the screen', bar.x >= 0 && bar.y >= 0 && bar.x + bar.w <= vp.width && bar.y + bar.h <= vp.height, JSON.stringify(bar));
+await page.screenshot({ path: shotDir + '/m_ar_photo.png' });
+const n0 = await G(() => window.__rivora.phone.photos.length); await G(() => document.querySelector('#photoUI [data-cap]').click()); await sleep(900);
+ok('Capture saves a photo on mobile', (await G(() => window.__rivora.phone.photos.length)) === n0 + 1);
+await G(() => document.querySelector('#photoUI [data-x]').click()); await sleep(500); ok('Exit leaves photo mode', await G(() => !window.__rivora.photoMode));
+// conversation panel on a phone screen
+await simWait(1.5);
+const talked = await G(() => { const g = window.__rivora; const n = g.nour.hassan; if (!n) return false; g.player.teleport(n.pos.x + 1.3, 0.15, n.pos.z, -Math.PI / 2); g.dialogue.open(n); return !!g.dialogue.ov; });
+await sleep(800);
+const dl = await G(() => { const p = document.querySelector('.dlg').closest('.panel') || document.querySelector('.dlg'); const r = p.getBoundingClientRect(); const bs = [...document.querySelectorAll('.dlg-opts button')].map((b) => b.getBoundingClientRect()); return { x: r.x, y: r.y, w: r.width, h: r.height, sh: p.scrollHeight, ch: p.clientHeight, minH: Math.min(...bs.map((q) => q.height)), line: document.querySelector('.dlg-line').textContent }; });
+ok('Conversation panel fits a landscape phone (scrolls if needed)', talked && dl.x >= 0 && dl.y >= 0 && dl.x + dl.w <= vp.width + 1 && dl.y + dl.h <= vp.height + 1, JSON.stringify(dl));
+ok('Reply buttons are tappable (>= 32 px tall)', dl.minH >= 32, dl.minH.toFixed(0) + ' px');
+await page.screenshot({ path: shotDir + '/m_ar_dialogue.png' });
+await G(() => document.querySelector('.dlg-opts [data-k="how"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))); await simWait(0.3); await sleep(500);
+ok('Tapping a reply gets an Egyptian Arabic answer', /[؀-ۿ]/.test(await G(() => document.querySelector('.dlg-line').textContent)), await G(() => document.querySelector('.dlg-line').textContent));
+await G(() => window.__rivora.dialogue.close()); await sleep(400);
+// phone
+await G(() => window.__rivora.phone.show()); await sleep(900);
+const ph = await G(() => { const r = document.querySelector('#phone').getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, rtl: getComputedStyle(document.querySelector('#phone')).direction }; });
+ok('Phone fits the screen in Arabic (RTL)', ph.x >= 0 && ph.y >= 0 && ph.x + ph.w <= vp.width + 1 && ph.y + ph.h <= vp.height + 1 && ph.rtl === 'rtl', JSON.stringify(ph));
+await page.screenshot({ path: shotDir + '/m_ar_phone.png' }); await G(() => window.__rivora.phone.close());
+ok('No runtime errors (mobile, Arabic, realistic build)', errs.length === 0, errs.slice(0, 3).join(' | '));
+console.log(`\n${results.filter((r) => r.p).length}/${results.length} mobile overhaul checks passed`);
+await b.close();

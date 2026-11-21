@@ -64,6 +64,7 @@ export class NPCManager {
   }
   spawnAt(x, z, role = 'ped', a, opts = {}) {
     a = a || (role === 'police' || role === 'thug' || role === 'barista' || role === 'athlete' || role === 'medic' ? uniformAppearance(role === 'athlete' ? 'athlete' : role, R) : randomAppearance(R));
+    if (!a.skinTone && role !== 'police') { const nour = L.districtAt(x, z) === 'nour'; const T = nour ? ['olive', 'tan', 'tan', 'brown', 'brown', 'deep', 'olive'] : ['base', 'base', 'base', 'olive', 'tan', 'brown', 'deep']; a.skinTone = T[Math.floor(R() * T.length)]; if (nour && a.hair) a.hair.color = R() < 0.85 ? '#1b1410' : a.hair.color; }
     const n = this._make(a, role);
     n.pos.set(x, opts.y ?? this.game.city.surfaceHeight(x, z, 50), z); n.heading = opts.heading ?? R() * 6.28; n.object.rotation.y = n.heading;
     if (opts.state) { n.state = opts.state; n.stateT = opts.t ?? 999; }

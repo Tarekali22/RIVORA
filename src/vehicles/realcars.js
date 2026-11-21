@@ -1,17 +1,16 @@
 // Realistic car bodies (merged from "Miami Nights 2"), used in the multi-file build when the models are loaded.
-//  - Sports: Ferrari 458 by vicent091036 (CC BY 4.0, via three.js examples)
+//  (A Ferrari 458 replica used before was removed: the overhaul rules ask for original designs, not copies of real brands' models.)
 //  - Concept: "Car Concept" by Eric Chadwick / DGG (CC BY 4.0, Khronos glTF sample assets)
 //  - Muscle: classic muscle car by Karol Miklas (CC BY 4.0, via pmndrs/racing-game)
 // Each template is normalised once (front = +Z, wheels on the ground, centred) and shared by every car.
-export const REAL_CAR_FOR = { strada: 'ferrari', vortex: 'ferrari', meridian: 'concept', valence: 'concept', ion: 'concept', brawler: 'muscle', cab: 'muscle', police: 'muscle' };
+export const REAL_CAR_FOR = { strada: 'concept', vortex: 'concept', meridian: 'concept', valence: 'concept', ion: 'concept', brawler: 'muscle', cab: 'muscle', police: 'muscle', ecab: 'muscle' };
 export const realCarsAvailable = () => !!(typeof window !== 'undefined' && window.RIVORA_REAL && window.RIVORA_REAL.cars);
 
 const CLS = {
-  ferrari: (n, o) => (/^brake/.test(o.name) ? 'dark' : ({ Body_Color: 'paint', Glass_Gray: 'glass', Projector_Glass: 'lightF', Turn_Signal_LED: 'lightF', Taillight_Glass: 'lightR', metal_gray: 'chrome', metal_chrome: 'chrome', Ferrari_Yellow: null })[n] ?? 'dark'),
   concept: (n) => (/^Paint/.test(n) ? 'paint' : /^Glass/.test(n) ? 'glass' : /Headlight|Signallight/.test(n) ? 'lightF' : /Brakelight/.test(n) ? 'lightR' : /^Rim|Mirror|Mechanical|License/.test(n) ? 'chrome' : 'dark'),
   muscle: (n) => (/^BodyPaint$/.test(n) ? 'paint' : /^Glass/.test(n) ? 'glass' : /^BrakeLight/.test(n) ? 'lightR' : /^HeadLight/.test(n) ? 'lightF' : /^Chrome|^License|^TurnSignal/.test(n) ? 'chrome' : 'dark'),
 };
-const FILE = { ferrari: 'car_sport_lo', concept: 'car_concept', muscle: 'car_muscle' };
+const FILE = { concept: 'car_concept', muscle: 'car_muscle' };
 const VCOL = { dark: [0.035, 0.036, 0.04], chrome: [0.78, 0.79, 0.8] };
 
 function f32(g) { // de-quantise + de-index (meshopt-compressed sources)

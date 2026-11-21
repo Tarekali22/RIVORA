@@ -1,6 +1,6 @@
 // Smoke test of the multi-file realistic build (dist/web served over http on :8777).
 import { launch, sleep, shotDir } from './harness.mjs';
-const url = process.argv[2] || 'http://localhost:8777/index.html';
+const url = process.argv[2] || 'http://localhost:8777/web/index.html';
 const b = await launch();
 const ctx = await b.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
 const page = await ctx.newPage(); const logs = [];

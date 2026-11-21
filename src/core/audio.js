@@ -3,7 +3,7 @@
 import { clamp, lerp, R } from './util.js';
 
 const fin = (v) => (Number.isFinite(v) ? v : 0);
-export const DEFAULT_LEVELS = { master: 0.7, music: 0.45, ambience: 0.55, voices: 0.6, traffic: 0.5, effects: 0.65, ui: 0.5 };
+export const DEFAULT_LEVELS = { master: 0.7, music: 0.45, ambience: 0.55, voices: 0.6, traffic: 0.5, effects: 0.65, ui: 0.5, phone: 0.6 };
 
 export class AudioEngine {
   constructor() { this.ctx = null; this.levels = { ...DEFAULT_LEVELS }; this.muted = false; this.cool = new Map(); this.voiceBudget = 0; this.engines = new Set(); }
@@ -16,7 +16,7 @@ export class AudioEngine {
     this.master = c.createGain(); this.analyser = c.createAnalyser(); this.analyser.fftSize = 2048;
     this.master.connect(this.limiter); this.limiter.connect(this.analyser); this.analyser.connect(c.destination);
     this.bus = {};
-    for (const k of ['music', 'ambience', 'voices', 'traffic', 'effects', 'ui']) { const g = c.createGain(); g.connect(this.master); this.bus[k] = g; }
+    for (const k of ['music', 'ambience', 'voices', 'traffic', 'effects', 'ui', 'phone']) { const g = c.createGain(); g.connect(this.master); this.bus[k] = g; }
     // indoor filter on ambience + traffic (outdoor sounds muffle when inside)
     this.outdoor = c.createBiquadFilter(); this.outdoor.type = 'lowpass'; this.outdoor.frequency.value = 20000;
     this.outdoor.connect(this.bus.ambience);
@@ -127,7 +127,7 @@ export class AudioEngine {
   }
   ringtone(on) {
     if (!this.ctx) return; clearInterval(this._ring); if (!on) return;
-    const play = () => [659, 784, 988, 784, 659, 988].forEach((f, i) => this.tone({ bus: 'ui', type: 'sine', f, d: 0.14, v: 0.09, delay: i * 0.12 }));
+    const play = () => [659, 784, 988, 784, 659, 988].forEach((f, i) => this.tone({ bus: 'phone', type: 'sine', f, d: 0.14, v: 0.09, delay: i * 0.12 }));
     play(); this._ring = setInterval(play, 1800);
   }
   vibrate() { this.tone({ bus: 'ui', type: 'square', f: 70, d: 0.25, v: 0.05, filter: ['lowpass', 200] }); }

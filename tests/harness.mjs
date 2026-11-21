@@ -11,7 +11,7 @@ export async function launch() {
 }
 export async function openGame(browser, opts = {}) {
   const ctx = await browser.newContext(opts.device ? { ...devices[opts.device], deviceScaleFactor: 1 } : { viewport: opts.viewport || { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-  const page = await ctx.newPage();
+  const page = await ctx.newPage(); page.setDefaultTimeout(150000);
   const logs = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(m.type() + ': ' + m.text()); });
   page.on('pageerror', (e) => logs.push('pageerror: ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 4).join('\n')));

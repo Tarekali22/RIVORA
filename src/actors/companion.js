@@ -179,14 +179,36 @@ export class Companion {
   }
   voice() { const G = this.game; G.audio.human(this.kind === 'dog' ? 'bark' : this.kind === 'cat' ? 'meow' : 'robot', this.pos, this.kind === 'dog' ? 1 : 1.1); }
   pet() { this.happy = 1; this.petT = 3; this.special = this.kind === 'robot' ? 'tilt' : 'sit'; if (this.kind === 'cat') this.game.audio.human('purr', this.pos); else this.voice(); bus.emit('pet'); }
+  // The companion rides along in every vehicle: passenger seat (cars, bus, boats, helicopter, aircraft),
+  // a padded carrier behind the rider (motorbikes, scooters) or a front basket (bicycle).
   onEnterVehicle(v) {
-    const can = v.type === 'car' && v.spec.body !== 'bus'; const d = this.pos.distanceTo(v.pos);
-    if (can && d < 14 && this.mode !== 'stay') { this.inVehicle = v; this.root.visible = true; }
+    const d = this.pos.distanceTo(v.pos);
+    if (d < 16 && this.mode !== 'stay') { this.inVehicle = v; this.root.visible = true; this._mount(v); this.lastSp = v.speed || 0; this.leanP = 0; this.leanR = 0; }
     else if (this.mode !== 'stay') this.mode = 'waiting';
+  }
+  _mount(v) {
+    const s = v.m.seat || [0.4, 0.6, 0], t = v.type, body = v.spec.body, robot = this.kind === 'robot';
+    let off, carrier = null, scale = 1;
+    if (t === 'car') off = body === 'bus' ? [-(s[0] + 0.25), s[1] + 0.55, s[2] - 1.6] : [-s[0], s[1] + (robot ? 0.45 : 0.55), s[2]];
+    else if (t === 'bike') {
+      scale = body === 'bicycle' ? 0.55 : 0.62;
+      const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: body === 'bicycle' ? 0x8a6a42 : 0x2b2f33, roughness: 0.8 }), pad = new THREE.MeshStandardMaterial({ color: 0x9a3b3b, roughness: 0.9 });
+      const W = 0.46, D = body === 'bicycle' ? 0.36 : 0.44, H = 0.26, bx = (w, h, d, x, y, z, m = mat) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; g.add(b); };
+      bx(W, 0.03, D, 0, 0, 0, pad); bx(W, H, 0.025, 0, H / 2, D / 2); bx(W, H, 0.025, 0, H / 2, -D / 2); bx(0.025, H, D, W / 2, H / 2, 0); bx(0.025, H, D, -W / 2, H / 2, 0);
+      off = body === 'bicycle' ? [0, s[1] + 0.5, s[2] + 0.82] : [0, s[1] + 0.3, s[2] - 0.64];
+      g.position.set(off[0], off[1] - 0.05, off[2]); v.body.add(g); carrier = g; off = [off[0], off[1] + 0.02, off[2]];
+    } else if (t === 'boat') off = body === 'jetski' ? [0, s[1] + 0.28, s[2] - 0.62] : [-s[0], s[1] + 0.32, s[2] - 1.1];
+    else off = [-s[0], s[1] + 0.35, s[2]]; // helicopter / aircraft co-pilot seat
+    this.mountInfo = { off, carrier, scale, base: this.root.scale.x };
+    this.root.scale.setScalar(this.mountInfo.base * scale);
   }
   onExitVehicle(v) {
     const G = this.game, P = G.player;
-    if (this.inVehicle) { const d = v.doorWorld(-1); this.pos.set(d.x, G.city.surfaceHeight(d.x, d.z, v.pos.y + 1), d.z); this.inVehicle = null; this.voice(); }
+    if (this.inVehicle) {
+      const mi = this.mountInfo; if (mi) { if (mi.carrier && mi.carrier.parent) mi.carrier.parent.remove(mi.carrier); this.root.scale.setScalar(mi.base); this.mountInfo = null; }
+      const d = v.type === 'car' && v.doorWorld ? v.doorWorld(-1) : v.local(-1.3, -0.4); const gy = G.city.surfaceHeight(d.x, d.z, v.pos.y + 1);
+      this.pos.set(d.x, v.type === 'boat' ? Math.max(gy, v.pos.y) : gy, d.z); this.inVehicle = null; this.voice();
+    }
     else if (this.mode === 'waiting') { this.mode = 'follow'; if (this.pos.distanceTo(P.pos) > 60) this._recover(true); }
   }
   _recover(force) { // reappear behind the player, out of the camera's view
@@ -205,8 +227,13 @@ export class Companion {
     this.petT -= dt; if (this.petT <= 0 && this.special === 'tilt') this.special = null; this.happy = damp(this.happy, 0.5, 0.2, dt);
     if (this.inVehicle) {
       const v = this.inVehicle; if (v.disabled && !v.driver) { this.inVehicle = null; return; }
-      const seat = new THREE.Vector3(-v.m.seat[0], v.m.seat[1] + (this.kind === 'robot' ? 0.45 : 0.55), v.m.seat[2]); v.body.localToWorld(seat);
-      this.pos.copy(seat); this.root.quaternion.copy(v.body.getWorldQuaternion(new THREE.Quaternion())); this.model.animate(dt, 0, 'sit', this.happy); return;
+      if (!this.mountInfo) this._mount(v);
+      const seat = new THREE.Vector3(...this.mountInfo.off); v.body.localToWorld(seat); this.pos.copy(seat);
+      // react to the ride: lean back when accelerating, forward when braking, sway in turns
+      const sp = v.speed || 0, acc = clamp((sp - (this.lastSp ?? sp)) / Math.max(dt, 1e-3), -25, 25); this.lastSp = sp;
+      this.leanP = damp(this.leanP || 0, clamp(acc * 0.03, -0.32, 0.32), 5, dt); this.leanR = damp(this.leanR || 0, clamp((v.yawRate || 0) * sp * 0.025, -0.3, 0.3), 5, dt);
+      const q = v.body.getWorldQuaternion(new THREE.Quaternion()); q.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-this.leanP, 0, this.leanR)));
+      this.root.quaternion.copy(q); this.model.animate(dt, 0, 'sit', this.happy); if (Math.abs(acc) > 9 && (this._yelp = (this._yelp || 0) - dt) < 0) { this._yelp = 4; this.voice(); } return;
     }
     this.root.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.heading);
     if (G.interior && !this.interior) { this.root.visible = false; return; } this.root.visible = true;

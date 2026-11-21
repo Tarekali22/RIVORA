@@ -7,7 +7,7 @@ export class SaveSystem {
     const G = this.game;
     G.vehicles.syncOwned();
     return {
-      v: VERSION, game: 'RIVORA', ts: Date.now(),
+      v: VERSION, game: 'RIVORA', ts: Date.now(), weapons: G.weapons ? G.weapons.serialize() : null, nour: G.nour ? G.nour.serialize() : null, lang: G.settings.lang,
       player: G.player.serialize(), companion: G.companion.serialize(), economy: G.economy.serialize(),
       owned: G.vehicles.owned, missions: G.missions.serialize(), env: G.env.serialize(), phone: G.phone.serialize(),
       outfits: [...G.ownedOutfits], contacts: [...G.contacts], relations: G.relations, gymToday: G.gymToday || 0,

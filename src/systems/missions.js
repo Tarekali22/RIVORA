@@ -4,6 +4,7 @@ import { uniformAppearance, randomAppearance } from '../actors/humanoid.js';
 import * as L from '../world/layout.js';
 import { clamp, dist, R, bus, fmtMoney, angleDiff, dist2 } from '../core/util.js';
 import { prim } from '../core/geo.js';
+const FEMALE = new Set(['Rosa', 'Mila', 'Mona', 'Sofia', 'Leila', 'Maya', 'Nadia', 'Hana', 'Noor', 'Yara', 'Priya', 'Olivia', 'Mia', 'Amara', 'Chloe', 'Imani', 'Lucia', 'Zara', 'Elena', 'Talia', 'Iris', 'Camila', 'Bea', 'Ines', 'Dispatch']); // voice selection for mission speakers
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 export class Missions {
@@ -18,7 +19,8 @@ export class Missions {
     bus.on('busted', () => this.active && this.fail('You were arrested.'));
   }
   // ---------------- framework ----------------
-  say(who, line, sec) { const G = this.game; sec = sec || Math.max(2.4, line.length * 0.055); if (G.testFast) sec *= 0.03; G.ui.subtitle(who, line, sec); if (G.speak) G.speak(line, who === 'Mr. Vale' || who === 'Dani' || who === 'Kai' || who === 'Jett' ? 'm' : 'f', who); return wait(sec * 1000); }
+  say(who, line, sec) { const G = this.game; sec = sec || Math.max(2.4, line.length * 0.055); if (G.testFast) sec *= 0.03; G.ui.subtitle(who, line, sec); if (G.speak) G.speak(line, this.sexOf(who), who); return wait(sec * 1000); }
+  sexOf(who) { const G = this.game; if (G.player && who === G.player.name) return (G.player.a && G.player.a.sex) || 'm'; return FEMALE.has(String(who || '').split(' ')[0]) ? 'f' : 'm'; }
   async talk(lines) { for (const [w, l] of lines) { if (!this.game.running) return; await this.say(w, l); } }
   start(def) {
     if (this.active) { this.game.ui.toast('Already on a job', 'Finish or quit your current mission first (Pause menu).', 'warn'); return false; }
@@ -37,6 +39,12 @@ export class Missions {
     G.ui.objective(''); const reward = typeof m.reward === 'function' ? m.reward(m) : m.reward || 0;
     if (reward) G.economy.earn(reward, 'Mission: ' + m.title);
     G.audio.ui('mission'); G.ui.big('MISSION PASSED', reward ? `${m.title} · ${fmtMoney(reward)}` : m.title, '#ffd166', 4);
+    // medals (bronze / silver / gold) and optional objectives
+    const medal = typeof m.medal === 'function' ? m.medal(m) : null; const rank = { bronze: 1, silver: 2, gold: 3 };
+    if (medal) { const k = m.id + ':medal', prev = this.best[k]; if (!prev || rank[medal] > rank[prev]) this.best[k] = medal; }
+    const opts = (m.optional || []).map((o) => ({ text: o.text, ok: !!o.ok(m) }));
+    if (opts.some((o) => o.ok) && m.bonus) { const b = opts.filter((o) => o.ok).length * m.bonus; G.economy.earn(b, 'Mission bonus: ' + m.title); m._bonus = b; }
+    this.summary(m, reward, medal, opts);
     if (m.onComplete) m.onComplete(m); bus.emit('missionComplete', m.id, reward); G.autosave('mission');
   }
   fail(reason) {
@@ -44,6 +52,17 @@ export class Missions {
     G.audio.ui('fail'); G.ui.big('MISSION FAILED', reason, '#ff4d5e', 4); if (m.onFail) m.onFail(m); bus.emit('missionFail', m.id, reason);
   }
   quit() { if (this.active) this.fail('You walked away from the job.'); }
+  // completion card: medal, time, optional objectives, reward (non-blocking)
+  summary(m, reward, medal, opts) {
+    const G = this.game, ar = document.body.classList.contains('rtl'), el = document.createElement('div'); el.className = 'msum';
+    const md = { gold: ['🥇', ar ? 'ذهبية' : 'Gold'], silver: ['🥈', ar ? 'فضية' : 'Silver'], bronze: ['🥉', ar ? 'برونزية' : 'Bronze'] }[medal];
+    const tl = (o) => (typeof o === 'string' ? o : ar ? o.ar : o.en);
+    el.innerHTML = `<div class="ms-h"></div><div class="ms-t"></div>${md ? `<div class="ms-m">${md[0]} <b>${md[1]}</b></div>` : ''}<div class="ms-r"></div><ul class="ms-o"></ul>`;
+    el.querySelector('.ms-h').textContent = ar ? 'نجحت المهمة' : 'MISSION PASSED'; el.querySelector('.ms-t').textContent = (typeof m.title === 'object' ? tl(m.title) : m.title) + ' · ' + Math.round(m.t || 0) + (ar ? ' ث' : 's');
+    el.querySelector('.ms-r').textContent = (reward ? fmtMoney(reward) : '') + (m._bonus ? ` + ${fmtMoney(m._bonus)} ${ar ? 'مكافأة' : 'bonus'}` : '');
+    const ul = el.querySelector('.ms-o'); for (const o of opts) { const li = document.createElement('li'); li.textContent = (o.ok ? '✓ ' : '✗ ') + tl(o.text); li.className = o.ok ? 'ok' : 'no'; ul.appendChild(li); }
+    (document.getElementById('hud') || document.body).appendChild(el); setTimeout(() => el.classList.add('out'), G.testFast ? 300 : 7000); setTimeout(() => el.remove(), G.testFast ? 600 : 7600);
+  }
   track(e) { this.ents.push(e); return e; }
   cleanup() {
     const G = this.game;
@@ -56,7 +75,7 @@ export class Missions {
     const G = this.game; const m = this.active;
     this._timers(dt);
     if (!m) { this.beacon.visible = false; return; }
-    m.stepT += dt; const s = m.steps[m.i];
+    m.stepT += dt; m.t = (m.t || 0) + dt; m.hpMin = Math.min(m.hpMin ?? 1e9, G.player.health); const s = m.steps[m.i];
     if (s.update) { const r = s.update(dt, m); if (r === 'done') this.next(); else if (typeof r === 'string' && r.startsWith('fail:')) this.fail(r.slice(5)); }
     const mk = this.marker();
     if (mk && !G.interior) { this.beacon.visible = true; this.beacon.position.set(mk.x, mk.y ?? G.city.surfaceHeight(mk.x, mk.z, 300), mk.z); this.ring.rotation.z += dt; this.ring.scale.setScalar(mk.r ? mk.r / 2.4 : 1); }

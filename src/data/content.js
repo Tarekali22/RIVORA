@@ -51,11 +51,11 @@ export const BOAT_RENTAL = [{ key: 'wavedart', price: 120 }, { key: 'seastrike',
 export const HELI_PRICE = 900;
 
 export const TIPS = [
-  'Press P to open your phone. Missions arrive as calls and texts.',
+  'Press Tab to open your phone. Missions arrive as calls and texts.',
   'Hold Shift to sprint. Gym training raises stamina, strength and endurance.',
   'Red-light cameras are marked PHOTO ENFORCED. Not every intersection has one.',
   'Your companion follows you everywhere — press Z to make them stay or follow.',
-  'Electric cars need charging. Park beside a green-lit charger and press E.',
+  'Electric cars need charging. Park beside a green-lit charger and press Enter.',
   'Lose the police by breaking line of sight and staying out of view.',
   'Sleep at home to skip time and save your progress.',
 ];

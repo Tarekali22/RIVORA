@@ -52,6 +52,7 @@ export class CameraRig {
       dist = this.dist; if (st === 'freefall') { dist = 7; fovT = 75; } if (st === 'parachute') { dist = 9; height = 2.5; } if (G.interior) dist = Math.min(dist, 3.4);
       if (st === 'activity' && P.activity && P.activity.cam) dist = P.activity.cam;
       if (P.action || P.blocking) dist = Math.min(dist, 3.6);
+      const az = this.aimZoom || 0; if (az > 0.01) { dist = lerp(dist, 1.75, az); fovT = lerp(fovT, 50, az); }
       if (this.firstPerson && st === 'foot') { const h = P.h.bones.head.getWorldPosition(new THREE.Vector3()); cam.position.copy(h).add(new THREE.Vector3(Math.sin(P.heading) * 0.12, 0.08, Math.cos(P.heading) * 0.12)); const fw = this.yaw + Math.PI; cam.lookAt(cam.position.x + Math.sin(fw) * 5, cam.position.y - Math.sin(this.pitch) * 5, cam.position.z + Math.cos(fw) * 5); P.heading = dampAngle(P.heading, fw, 10, dt); this._fov(dt, 70); return; }
     }
     // smooth target
@@ -59,7 +60,7 @@ export class CameraRig {
     this.target.x = lerp(this.target.x, tx, k); this.target.y = lerp(this.target.y, ty + height, 1 - Math.exp(-dt * 10)); this.target.z = lerp(this.target.z, tz, k);
     if (this.target.distanceToSquared(new THREE.Vector3(tx, ty, tz)) > 400) this.target.set(tx, ty + height, tz);
     // shoulder offset (to the right of view)
-    const sh = v ? 0 : 0.32;
+    const sh = v ? 0 : 0.32 + (this.aimZoom || 0) * 0.33;
     const cy = Math.cos(this.pitch), sy = Math.sin(this.pitch);
     const dx = Math.sin(this.yaw) * cy, dz = Math.cos(this.yaw) * cy;
     const rx = -Math.cos(this.yaw), rz = Math.sin(this.yaw);

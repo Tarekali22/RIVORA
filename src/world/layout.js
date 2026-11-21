@@ -21,11 +21,13 @@ export const DISTRICTS = {
   outskirts: { name: 'Sierra Outskirts', density: 0.05 },
   nightlife: { name: 'Neon Row', density: 0.9 },
   beach: { name: 'Coral Beach', density: 0.6 },
+  nour: { name: 'El Nour Quarter', density: 1.0 },
 };
 
 export function blockDistrict(i, j) {
   if (j === 0) return i === 6 ? 'marina' : 'industrial';
   if (j === 1) return i <= 1 ? 'industrial' : i === 6 ? 'boardwalk' : 'downtown';
+  if ((j === 5 || j === 6) && i <= 1) return 'nour'; // El Nour Quarter (Egyptian-inspired)
   if (i === 6) return 'boardwalk';
   if (j <= 3) return i <= 1 ? 'commercial' : 'downtown';
   if (j === 4) return i <= 1 ? 'commercial' : i === 5 ? 'nightlife' : 'downtown';
