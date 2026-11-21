@@ -1,6 +1,7 @@
 // Procedural vehicle meshes. Each builder returns { root, body, wheels, door, lightsF, lightsR, paint, extras }.
 import { GeoBuilder, prim } from '../core/geo.js';
 import { signTex } from '../world/textures.js';
+import { buildRealCar, realCarsAvailable, REAL_CAR_FOR } from './realcars.js';
 
 let SH = null;
 function shared() {
@@ -69,6 +70,7 @@ export function buildVehicleModel(spec, color, opts = {}) {
   if (t === 'boat') return buildBoat(spec, color);
   if (t === 'heli') return buildHeli(spec, color);
   if (t === 'plane') return buildPlane(spec, color);
+  if (realCarsAvailable() && REAL_CAR_FOR[spec.key] && !opts.procedural) { try { return buildRealCar(spec, color, shared()); } catch (e) { console.warn('[RIVORA] real car fallback', e); } }
   return buildCar(spec, color, opts);
 }
 

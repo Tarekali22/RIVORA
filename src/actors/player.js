@@ -8,7 +8,7 @@ const GRAV = -22;
 export class Player {
   constructor(game, appearance) {
     this.game = game; this.a = JSON.parse(JSON.stringify(appearance || HERO_DEFAULT));
-    this.h = new Humanoid(this.a); this.object = this.h.object; game.scene.add(this.object);
+    this.h = new Humanoid(this.a, { tint: 'exact', hi: true }); this.object = this.h.object; game.scene.add(this.object);
     this.pos = this.object.position; this.vel = new THREE.Vector3(); this.heading = Math.PI;
     this.state = 'foot'; this.grounded = true; this.speed = 0; this.landT = 0; this.airT = 0;
     this.stats = { strength: 10, stamina: 10, endurance: 10, recovery: 10 };

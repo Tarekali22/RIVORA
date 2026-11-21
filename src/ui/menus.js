@@ -4,6 +4,7 @@ import { VEHICLES, DEALER_STOCK } from '../data/vehicles.js';
 import { Input, ACTION_LABELS } from '../core/input.js';
 import { fmtMoney, rgbToHex, R, bus, clamp } from '../core/util.js';
 import { WEATHERS } from '../world/environment.js';
+import { realAvailable, realModels, REAL_NAMES, FEMALE } from '../actors/realskin.js';
 import * as L from '../world/layout.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,6 +49,7 @@ export class Menus {
     const slider = (label, min, max, step, get, set) => { const l = document.createElement('label'); l.className = 'f'; l.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}">`; const i = l.querySelector('input'); i.value = get(); i.oninput = () => { set(+i.value); apply(); }; body.appendChild(l); };
     const nl = document.createElement('label'); nl.className = 'f'; nl.innerHTML = '<span>Name</span><input type="text" id="cc-name" maxlength="24">'; nl.querySelector('input').value = name; nl.querySelector('input').oninput = (e) => name = e.target.value || 'Marcus Reed'; body.appendChild(nl);
     sec('Quick start'); const qs = row(); for (const [t, fn] of [['Default hero', () => Object.assign(a, JSON.parse(JSON.stringify(HERO_DEFAULT)))], ['Randomize', () => Object.assign(a, randomAppearance(R))]]) { const b = document.createElement('button'); b.className = 'btn small'; b.textContent = t; b.onclick = () => { fn(); apply(); }; qs.appendChild(b); }
+    if (realAvailable()) { sec('Realistic character'); const rr = row(); for (const k of realModels()) { const b = document.createElement('button'); b.className = 'btn small' + (a.real === k ? ' sel' : ''); b.textContent = REAL_NAMES[k] || k; b.onclick = () => { a.real = k; a.sex = FEMALE.includes(k) ? 'f' : 'm'; apply(); rr.querySelectorAll('.btn').forEach((x) => x.classList.remove('sel')); b.classList.add('sel'); }; rr.appendChild(b); } const nt = document.createElement('p'); nt.className = 'note'; nt.textContent = 'Motion-captured 3D people. Your top colour below re-dyes their clothes.'; body.appendChild(nt); }
     sec('Use your photo (optional, on this device)');
     const photo = document.createElement('div'); photo.innerHTML = `<p class="note">Pick a clear, well-lit face photo. It never leaves your browser: it's only used to sample your skin and hair colour, then discarded. Real 3D face reconstruction is not available in this build.</p><label class="row note"><input type="checkbox" id="cc-consent"> I consent to processing this photo locally</label><input type="file" id="cc-file" accept="image/*" disabled style="margin-top:8px"><div class="pick" style="margin-top:8px"></div>`;
     body.appendChild(photo); const cons = photo.querySelector('#cc-consent'), file = photo.querySelector('#cc-file'), pick = photo.querySelector('.pick');
@@ -69,7 +71,7 @@ export class Menus {
       img.src = url;
     };
     sec('Body'); slider('Height', 1.55, 1.98, 0.01, () => a.height, (v) => a.height = v); slider('Build', 0, 1, 0.01, () => a.build, (v) => a.build = v);
-    choices(['m', 'f'], () => a.sex, (v) => a.sex = v, { m: 'Masculine frame', f: 'Feminine frame' });
+    choices(['m', 'f'], () => a.sex, (v) => { a.sex = v; if (a.real && FEMALE.includes(a.real) !== (v === 'f')) a.real = null; }, { m: 'Masculine frame', f: 'Feminine frame' });
     sec('Skin'); swatches([...SKIN_TONES, HERO_DEFAULT.skin], () => a.skin, (v) => a.skin = v);
     sec('Face'); slider('Face width', 0.86, 1.1, 0.01, () => a.faceW, (v) => a.faceW = v); slider('Jaw', 0, 1, 0.01, () => a.jaw, (v) => a.jaw = v); slider('Brows', 0.6, 1.6, 0.01, () => a.brow, (v) => a.brow = v);
     choices(EYE_COLORS, () => a.eyes, (v) => a.eyes = v, Object.fromEntries(EYE_COLORS.map((c, i) => [c, ['Dark brown', 'Brown', 'Blue', 'Green', 'Grey'][i]])));

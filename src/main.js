@@ -111,7 +111,7 @@ class Game {
   saveSettings() { try { localStorage.setItem('rivora.settings', JSON.stringify({ settings: this.settings, bindings: this.input.bindings, levels: this.audio.levels, sens: this.input.sens, invertY: this.input.invertY, touchSens: this.input.touchSens })); } catch (e) {} }
   applyQuality(q) { Object.assign(this.quality, QUALITY[q]); this.traffic.max = this.quality.traffic; this.npcs.max = this.quality.npcs; this.env.fogFar = this.quality.drawDistance; this.applyShadows(); this.resize(); }
   applyShadows() { const on = this.quality.shadows && this.settings.shadows; this.renderer.shadowMap.enabled = on; this.env.sun.castShadow = on; this.scene.traverse((o) => { if (o.material) { const m = Array.isArray(o.material) ? o.material : [o.material]; m.forEach((x) => x.needsUpdate = true); } }); }
-  resize() { const w = window.innerWidth, h = window.innerHeight; const dpr = Math.min(window.devicePixelRatio || 1, this.quality.dpr) * (this.settings.renderScale || 1); this.renderer.setPixelRatio(dpr); this.renderer.setSize(w, h); this.camera.aspect = w / Math.max(1, h); this.camera.updateProjectionMatrix(); }
+  resize() { const w = window.innerWidth, h = window.innerHeight; const dpr = Math.min(window.devicePixelRatio || 1, this.quality.dpr) * (this.settings.renderScale || 1); this.renderer.setPixelRatio(dpr); this.renderer.setSize(w, h); this.camera.aspect = w / Math.max(1, h); this.camera.updateProjectionMatrix(); this._sizeComposer && this._sizeComposer(); }
   timeStr() { return fmtTime(this.env.hour); }
   weatherLabel() { return (WEATHERS[this.env.weatherKey] || {}).label || 'Clear'; }
   // ---------------- flow ----------------
@@ -261,7 +261,18 @@ class Game {
     h.mesh.geometry.dispose();
     return c.toDataURL('image/jpeg', 0.85);
   }
-  renderNow() { this.renderer.render(this.scene, this.camera); }
+  renderNow() { this._render(); }
+  // cinematic bloom (multi-file build, high/ultra quality on non-touch devices)
+  _render() {
+    const RR = window.RIVORA_REAL, want = !!(RR && RR.post && !this.touch && this.quality.level >= 2 && !this.interior);
+    if (want && !this.composer && !this._noPost) {
+      try { const P = RR.post, rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 }); const c = new P.EffectComposer(this.renderer, rt); c.addPass(new P.RenderPass(this.scene, this.camera)); this.bloom = new P.UnrealBloomPass(new THREE.Vector2(256, 256), 0.28, 0.5, 0.95); c.addPass(this.bloom); c.addPass(new P.OutputPass()); this.composer = c; this._sizeComposer(); }
+      catch (e) { console.warn('[RIVORA] post-processing disabled', e); this._noPost = true; }
+    }
+    if (want && this.composer) { if (this.bloom) this.bloom.strength = this.env && this.env.night ? 0.42 : 0.24; this.composer.render(); }
+    else this.renderer.render(this.scene, this.camera);
+  }
+  _sizeComposer() { if (!this.composer) return; const r = this.renderer, w = window.innerWidth, h = window.innerHeight; this.composer.setPixelRatio(r.getPixelRatio()); this.composer.setSize(w, h); }
   // ---------------- interaction prompts ----------------
   _interactions() {
     const P = this.player, I = this.input; if (this.cutscene || this.ui.blockingUI) { this.ui.prompt(); return; }
@@ -304,7 +315,7 @@ class Game {
     } else if (!this.running) this.step(dt);
     if (this.running) this._interactions();
     if (this.paused && ((this._pf = (this._pf || 0) + 1) % 4)) return; // save power while paused
-    this.renderer.render(this.scene, this.camera);
+    this._render();
     if (this.settings.showFps) this.ui.hint(`${this.fps.toFixed(0)} FPS · ${this.renderer.info.render.calls} draws`, 1.2);
   }
   step(dt) {

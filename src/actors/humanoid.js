@@ -1,6 +1,7 @@
 // Procedural human: one SkinnedMesh (rigid skinning, vertex colours) + blended procedural animation.
 import { GeoBuilder, prim } from '../core/geo.js';
 import { clamp, lerp, mixHex, shadeHex, R, smoothstep, TAU } from '../core/util.js';
+import { RealSkin, realAvailable, pickModel } from './realskin.js';
 
 export const SKIN_TONES = ['#f4d3bd', '#eac0a2', '#d9a382', '#c8927e', '#b9805f', '#a46d4f', '#8a5a3e', '#6e4530', '#563424', '#3f261b'];
 export const HAIR_COLORS = ['#1b1512', '#2a1f1a', '#3b2a20', '#5a3d28', '#7a5233', '#a27245', '#c9a46b', '#8f8a84', '#d8d2c8', '#6b2e1e'];
@@ -13,7 +14,7 @@ export const BOTTOMS = ['jeans', 'pants', 'chinos', 'shorts', 'skirt', 'joggers'
 // The default hero: configured from the reference portraits supplied by the player-owner
 // (skin tone, buzz cut, dark brows, slim athletic build, black crew with white shoulder stripes).
 export const HERO_DEFAULT = {
-  sex: 'm', height: 1.76, build: 0.42, skin: '#c48c74', faceW: 0.96, jaw: 0.55, hair: { style: 'buzz', color: '#231a16' },
+  real: 'carlos', sex: 'm', height: 1.76, build: 0.42, skin: '#c48c74', faceW: 0.96, jaw: 0.55, hair: { style: 'buzz', color: '#231a16' },
   facial: 'stubble', brow: 1.25, eyes: '#3b2414', earsBig: 1.15,
   top: { type: 'crew', color: '#151517', stripes: '#e8eef6' }, bottom: { type: 'jeans', color: '#2c3a52' }, shoes: { color: '#f2f2f2', sole: '#d9d9d9' },
   acc: { watch: true, earbuds: true, cap: false, glasses: false, chain: false },
@@ -186,7 +187,8 @@ export class Humanoid {
     this.hipsY = 0.98; this.hipsX = 0; this.hipsZ = 0; this.bodyPitch = 0; this.bodyRoll = 0; this.bodyY = 0;
     this.props = {};
   }
-  build(a, opts = {}) {
+  build(a, opts) {
+    opts = opts || this._opts || {}; this._opts = opts;
     if (this.mesh) { this.body.remove(this.mesh); this.mesh.geometry.dispose(); }
     const { geo, layout } = buildHumanGeometry(a);
     const bones = {}, list = [];
@@ -200,13 +202,24 @@ export class Humanoid {
     this.mesh = mesh; this.bones = bones;
     const s = (a.height || 1.78) / 1.78; this.body.scale.setScalar(s); this.scale = s;
     this.body.add(mesh);
+    // realistic skin (multi-file build): a motion-captured Rocketbox avatar driven by this rig
+    if (realAvailable() && opts.real !== false) {
+      const key = pickModel(a);
+      if (key && (!this.real || this.real.name !== key)) { if (this.real) this.real.dispose(); this.real = new RealSkin(key, opts); this.body.add(this.real.root); }
+      if (this.real) {
+        mesh.visible = false;
+        const top = a.top || {}, kind = top.type === 'police' ? 'police' : null;
+        this.real.setTint(kind || (opts.tint === 'exact' ? (top.color || 'orig') : a.tint || 'orig'));
+      }
+    } else if (this.real) { this.real.dispose(); this.real = null; }
     // re-attach held props
-    if (this.props) for (const [k, p] of Object.entries(this.props)) if (p && p.parentBone) bones[p.parentBone].add(p.obj);
+    if (this.props) for (const [k, p] of Object.entries(this.props)) if (p && p.parentBone) this._boneFor(p.parentBone).add(p.obj);
   }
+  _boneFor(name) { return this.real ? this.real.socket(name) : this.bones[name]; }
   setAppearance(a) { this.a = a; this.build(a); }
   // Attach a prop to a bone (e.g. phone in right hand)
   hold(name, obj, bone = 'handR', pos = [0, -0.09, 0.03], rot = [0, 0, 0]) {
-    this.drop(name); obj.position.set(...pos); obj.rotation.set(...rot); this.bones[bone].add(obj); this.props[name] = { obj, parentBone: bone };
+    this.drop(name); obj.position.set(...pos); obj.rotation.set(...rot); this._boneFor(bone).add(obj); this.props[name] = { obj, parentBone: bone };
   }
   drop(name) { const p = this.props[name]; if (p) { p.obj.parent && p.obj.parent.remove(p.obj); delete this.props[name]; } }
   isHolding(name) { return !!this.props[name]; }
@@ -345,6 +358,7 @@ export class Humanoid {
     this.body.rotation.set(this.bodyPitch, 0, this.bodyRoll); this.body.position.y = this.bodyY;
     // when lying, keep body pivot near hips so the figure rests on the ground
     if (Math.abs(this.bodyPitch) > 0.8 && mode !== 'swim' && mode !== 'freefall' && mode !== 'activity') this.body.position.y = this.bodyY + 0.0;
+    if (this.real) this.real.sync(dt, this, s, mode);
   }
   _guard(add, t) {
     const b = Math.sin(t * 5) * 0.02;
@@ -445,6 +459,7 @@ export function randomAppearance(r = R, opts = {}) {
     top: { type: topType, color: pick(colors), shirt: '#f2f2f2', stripes: r() < 0.12 ? '#ffffff' : null }, bottom: { type: opts.bottom || pick(bottoms), color: pick(['#2c3a52', '#1d1e26', '#3b3b3b', '#c9b79a', '#5a6b7a', '#f1f1f1', '#6b4f3a', '#24324a']) },
     shoes: { color: pick(['#f2f2f2', '#111111', '#7a4a2a', '#d62828', '#1d3557', '#e9c46a']) },
     acc: { watch: r() < 0.3, earbuds: r() < 0.15, cap: r() < 0.12, capColor: pick(colors), glasses: r() < 0.15, chain: r() < 0.06 },
+    tint: r() < 0.4 ? 'orig' : 'v' + (1 + Math.floor(r() * 6)),
   };
 }
 export function uniformAppearance(kind, r = R) {

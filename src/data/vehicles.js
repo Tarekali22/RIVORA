@@ -26,6 +26,7 @@ export const VEHICLES = {
   skylark: { name: 'Skylark H4', cls: 'Helicopter', type: 'heli', body: 'heli', L: 11, W: 2.4, H: 3.2, power: 9, top: 62, price: 520000, colors: ['#1d3557', '#f1faee', '#e63946', '#0b090a'] },
   aerolite: { name: 'Aerolite 172', cls: 'Light aircraft', type: 'plane', body: 'plane', L: 8.3, W: 11, H: 2.7, power: 7, top: 75, price: 340000, colors: ['#ffffff', '#ffd166'] },
 };
+for (const k in VEHICLES) VEHICLES[k].key = k;
 export const DEALER_STOCK = ['pico', 'meridian', 'ion', 'atlas', 'haulmark', 'dune', 'brawler', 'strada', 'valence', 'kestrel', 'zipp', 'bicycle', 'ridgeback', 'vortex'];
 export const TRAFFIC_MIX = {
   downtown: ['meridian', 'meridian', 'cab', 'cab', 'valence', 'ion', 'atlas', 'courier', 'pico', 'citybus', 'strada', 'kestrel'],

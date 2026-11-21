@@ -65,15 +65,29 @@ function buildQuad(kind, o = {}) {
 }
 
 // ---------- original robot companion ----------
+function hawaiianTex() {
+  const c = makeCanvas(256, 128), g = c.getContext('2d'); g.fillStyle = '#17a3a0'; g.fillRect(0, 0, 256, 128);
+  const leaf = (x, y, r, a) => { g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = '#0d6b5e'; g.beginPath(); g.ellipse(0, 0, r * 1.8, r * 0.55, 0, 0, 7); g.fill(); g.restore(); };
+  const flower = (x, y, r, col) => { g.fillStyle = col; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; g.beginPath(); g.ellipse(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6, r * 0.62, r * 0.42, a, 0, 7); g.fill(); } g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(x, y, r * 0.22, 0, 7); g.fill(); };
+  let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 26; i++) leaf(rnd() * 256, rnd() * 128, 6 + rnd() * 8, rnd() * 3);
+  for (let i = 0; i < 18; i++) flower(rnd() * 256, rnd() * 128, 7 + rnd() * 7, ['#ff4f9a', '#ffcf3d', '#ff7b39', '#ffffff'][i % 4]);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1); return t;
+}
 function buildRobot(o = {}) {
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const shell = o.color || '#eef2f4', accent = o.accent || '#15b5b0', dark = '#1e2328';
+  const shell = o.color || '#c9b292', accent = o.accent || '#e0a948', dark = '#2a2622';
   const mat = MAT(); const tb = new GeoBuilder();
   part(tb, prim('capsule', 0.2, 0.22, 6, 14), 0, 0, 0, 0, 0, 0, 1, 1, 0.85, shell);
   part(tb, prim('box', 0.3, 0.06, 0.2), 0, -0.05, 0.12, 0, 0, 0, 1, 1, 1, accent);
   part(tb, prim('cyl', 0.06, 0.06, 0.03, 12), 0, 0.08, 0.17, Math.PI / 2, 0, 0, 1, 1, 1, accent);
   part(tb, prim('torus', 0.21, 0.02, 6, 24), 0, 0.12, 0, Math.PI / 2, 0, 0, 1, 1, 0.85, dark);
   const torso = meshOf(tb, mat); torso.position.y = 0.62; body.add(torso);
+  // boardwalk style: open Hawaiian shirt, gold chains (inspired by the reference stills)
+  const shirtTex = hawaiianTex(), shirtMat = new THREE.MeshStandardMaterial({ map: shirtTex, roughness: 0.8, side: THREE.DoubleSide });
+  const shirt = new THREE.Mesh(new THREE.CylinderGeometry(0.218, 0.238, 0.36, 28, 1, true, 0.42, Math.PI * 2 - 0.84), shirtMat); shirt.position.y = 0.66; shirt.scale.z = 0.88; shirt.castShadow = true; body.add(shirt);
+  const gold = new THREE.MeshStandardMaterial({ color: 0xd9a92e, metalness: 1, roughness: 0.28 });
+  for (const [r, y, t] of [[0.13, 0.82, 0.3], [0.155, 0.79, 0.42]]) { const ch = new THREE.Mesh(new THREE.TorusGeometry(r, 0.013, 6, 28), gold); ch.position.set(0, y, 0.035); ch.rotation.x = Math.PI / 2 - t; ch.scale.set(1, 1.15, 1); body.add(ch); }
   const neck = new THREE.Group(); neck.position.set(0, 0.92, 0); body.add(neck);
   const hb = new GeoBuilder();
   part(hb, prim('sphere', 0.17, 18, 14), 0, 0.14, 0, 0, 0, 0, 1.25, 0.9, 1, shell);
@@ -81,6 +95,11 @@ function buildRobot(o = {}) {
   part(hb, prim('torus', 0.08, 0.015, 6, 16), 0, 0.05, 0, Math.PI / 2, 0, 0, 1.2, 1, 1, dark);
   for (const sd of [-1, 1]) part(hb, prim('cyl', 0.05, 0.05, 0.04, 12), sd * 0.215, 0.14, 0, 0, 0, Math.PI / 2, 1, 1, 1, accent);
   const head = meshOf(hb, mat); neck.add(head);
+  // aviator sunglasses pushed up on the head + twin antennas
+  const lens = new THREE.MeshStandardMaterial({ color: 0x3a2a10, metalness: 0.9, roughness: 0.08 });
+  for (const sd of [-1, 1]) { const l = new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 10), lens); l.scale.set(1, 0.72, 0.32); l.position.set(sd * 0.062, 0.27, 0.12); l.rotation.x = -0.5; neck.add(l); }
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.012, 0.012), gold); bridge.position.set(0, 0.29, 0.125); bridge.rotation.x = -0.5; neck.add(bridge);
+  for (const sd of [-1, 1]) { const an = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.012, 0.2, 6), new THREE.MeshStandardMaterial({ color: 0x9a8f80, metalness: 0.8, roughness: 0.35 })); an.position.set(sd * 0.17, 0.33, -0.02); an.rotation.z = -sd * 0.25; neck.add(an); }
   const tip = new THREE.Mesh(prim('sphere', 0.025, 8, 6), new THREE.MeshBasicMaterial({ color: 0x3ff5e9, toneMapped: false })); tip.position.set(0.125, 0.4, -0.02); neck.add(tip);
   // animated visor face (canvas texture)
   const cv = makeCanvas(128, 64), g = cv.getContext('2d'); const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
@@ -107,12 +126,16 @@ function buildRobot(o = {}) {
   for (const sd of [-1, 1]) {
     const sh = new THREE.Group(); sh.position.set(sd * 0.25, 0.74, 0); body.add(sh);
     const a = new THREE.Mesh(prim('capsule', 0.045, 0.22, 3, 8), new THREE.MeshStandardMaterial({ color: shell, roughness: 0.5 })); a.position.y = -0.14; a.castShadow = true; sh.add(a);
+    const sl = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.075, 0.12, 14, 1, true), shirtMat); sl.position.y = -0.04; sh.add(sl);
     const hand = new THREE.Mesh(prim('sphere', 0.055, 8, 6), new THREE.MeshStandardMaterial({ color: dark, roughness: 0.4 })); hand.position.y = -0.3; sh.add(hand);
     const hip = new THREE.Group(); hip.position.set(sd * 0.11, 0.44, 0); body.add(hip);
     const th = new THREE.Mesh(prim('capsule', 0.05, 0.16, 3, 8), new THREE.MeshStandardMaterial({ color: dark, roughness: 0.4 })); th.position.y = -0.1; th.castShadow = true; hip.add(th);
     const knee = new THREE.Group(); knee.position.y = -0.21; hip.add(knee);
     const sn = new THREE.Mesh(prim('capsule', 0.045, 0.15, 3, 8), new THREE.MeshStandardMaterial({ color: shell, roughness: 0.5 })); sn.position.y = -0.09; sn.castShadow = true; knee.add(sn);
-    const foot = new THREE.Mesh(prim('cyl', 0.07, 0.08, 0.05, 12), new THREE.MeshStandardMaterial({ color: accent, roughness: 0.4 })); foot.position.set(0, -0.2, 0.02); knee.add(foot);
+    const foot = new THREE.Group(); foot.position.set(0, -0.2, 0.02); knee.add(foot); // roller skate
+    const boot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.07, 0.17), new THREE.MeshStandardMaterial({ color: shell, roughness: 0.45, metalness: 0.5 })); boot.castShadow = true; foot.add(boot);
+    const wmat = new THREE.MeshStandardMaterial({ color: 0xe0566f, roughness: 0.5 });
+    for (const wz of [-0.055, 0.055]) for (const wx of [-0.035, 0.035]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.022, 10), wmat); wh.rotation.z = Math.PI / 2; wh.position.set(wx, -0.05, wz); foot.add(wh); }
     limbs.push({ sh, hip, knee, sd });
   }
   let ph = 0, scanT = 0;
@@ -130,7 +153,7 @@ function buildRobot(o = {}) {
     neck.rotation.y = damp(neck.rotation.y, special === 'scan' ? Math.sin(scanT * 1.4) * 0.7 : special === 'look' ? 0.5 : 0, 4, dt);
     neck.rotation.z = damp(neck.rotation.z, special === 'tilt' || happy > 0.8 ? 0.25 : 0, 4, dt);
     blinkT -= dt; const blink = blinkT < 0.12; if (blinkT < 0) blinkT = 2 + R() * 3;
-    drawFace(special === 'charge' ? 'charge' : special === 'sleep' ? 'sleep' : happy > 0.8 ? 'happy' : special === 'alert' ? 'alert' : 'neutral', blink && special !== 'charge');
+    drawFace(special === 'charge' ? 'charge' : special === 'sleep' ? 'sleep' : happy >= 0.5 ? 'happy' : special === 'alert' ? 'alert' : 'neutral', blink && special !== 'charge');
     tip.material.color.setHSL(0.48, 1, 0.5 + Math.sin(scanT * 4) * 0.2);
   };
   return { root, animate, kind: 'robot', height: 1.15 };

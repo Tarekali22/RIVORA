@@ -1,0 +1,28 @@
+// Smoke test of the multi-file realistic build (dist/web served over http on :8777).
+import { launch, sleep, shotDir } from './harness.mjs';
+const url = process.argv[2] || 'http://localhost:8777/index.html';
+const b = await launch();
+const ctx = await b.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+const page = await ctx.newPage(); const logs = [];
+page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(m.type() + ': ' + m.text()); });
+page.on('pageerror', (e) => logs.push('pageerror: ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 5).join('\n')));
+await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+await page.goto(url);
+const G = (fn, arg) => page.evaluate(fn, arg);
+const t0 = Date.now();
+await page.waitForSelector('#title', { timeout: 300000 });
+console.log('title after', ((Date.now() - t0) / 1000).toFixed(1), 's; real =', await G(() => !!window.RIVORA_REAL), 'chars', await G(() => window.RIVORA_REAL && Object.keys(window.RIVORA_REAL.chars).join(',')));
+await G(() => { window.__rivora._noBlurPause = true; window.__rivora.testFast = true; });
+await page.click('[data-a="new"]'); await sleep(2500);
+await page.screenshot({ path: shotDir + '/w_creator.png' });
+await page.click('[data-next]'); await sleep(800);
+await page.click('.kinds .item >> nth=2'); await sleep(400);
+await G(() => { window.__rivora._skipIntro = true; });
+await page.click('[data-go]');
+const until = async (fn, ms) => { const t = Date.now(); while (Date.now() - t < ms) { if (await G(fn)) return true; await sleep(300); } return false; };
+console.log('playable', await until(() => { const g = window.__rivora; return g.running && !g.cutscene && g.player.state === 'foot'; }, 120000));
+await sleep(3000);
+await page.screenshot({ path: shotDir + '/w_start.png' });
+console.log(await G(() => { const g = window.__rivora; return JSON.stringify({ real: !!g.player.h.real, model: g.player.h.real && g.player.h.real.name, npcReal: g.npcs.list.filter((n) => n.h.real).length, npcs: g.npcs.list.length, realCars: g.vehicles.list.filter((v) => v.m.real).length, cars: g.vehicles.list.length, calls: g.renderer.info.render.calls, tris: g.renderer.info.render.triangles, fps: g.fps }); }));
+console.log(logs.slice(0, 15).join('\n'));
+await b.close();

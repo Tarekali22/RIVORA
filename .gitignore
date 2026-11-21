@@ -6,3 +6,4 @@ test-results/
 tests/screens/
 tests/*.log
 tests/debug*.mjs
+dist/web/
